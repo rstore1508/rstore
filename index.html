@@ -1,876 +1,1791 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
+
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Relógio Store - Catálogo</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Relógio Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- jsPDF para gerar o catálogo -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- PapaParse para importação CSV robusta -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- SheetJS para importação de Excel (xlsx/xls) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        apple: {
+                            bg: '#F5F5F7',
+                            card: '#FFFFFF',
+                            text: '#1D1D1F',
+                            textMut: '#86868B',
+                            border: '#D2D2D7'
+                        },
+                        brand: {
+                            50: '#ecfdf5', 100: '#d1fae5', 400: '#34d399',
+                            500: '#10b981', 600: '#059669', 800: '#065f46',
+                            900: '#064e3b'
+                        },
+                        vip: { 50: '#faf5ff', 100: '#f3e8ff', 500: '#a855f7', 600: '#9333ea', 900: '#581c87' }
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'apple': '0 4px 24px rgba(0, 0, 0, 0.04)',
+                        'apple-hover': '0 10px 40px rgba(0, 0, 0, 0.08)',
+                        'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.07)'
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
         }
-        body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #a0c6e8 100%);
-            min-height: 100vh;
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
         }
-        .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 1rem 0;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
-        }
-        .logo {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #333;
-            text-decoration: none;
-        }
-        .search-container {
-            flex: 1;
-            max-width: 400px;
-            position: relative;
-        }
-        .search-input {
-            width: 100%;
-            padding: 12px 40px 12px 16px;
-            border: 2px solid #e0e0e0;
-            border-radius: 25px;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-        .search-input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
-        }
-        .search-btn {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #667eea;
-            border: none;
-            border-radius: 50%;
-            width: 32px;
-            height: 32px;
-            color: white;
-            cursor: pointer;
-            transition: background 0.3s ease;
-        }
-        .search-btn:hover {
-            background: #5a6fd8;
-        }
-        .filters {
-            background: rgba(255, 255, 255, 0.9);
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-        }
-        .filter-group {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-        .filter-item {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-        .filter-item label {
-            font-weight: 600;
-            color: #333;
-        }
-        .filter-item select {
-            padding: 8px 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
-        }
-        .filter-item select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 30px;
-            padding: 20px 0;
-        }
-        .product-card {
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            position: relative;
-        }
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-        }
-        .product-image {
-            width: 100%;
-            height: 250px;
-            background: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 60px;
-            color: #999;
-            position: relative;
-            overflow: hidden;
-        }
-        .product-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .product-info {
-            padding: 20px;
-        }
-        .product-brand {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: #667eea;
-            font-weight: 600;
-            letter-spacing: 1px;
-        }
-        .product-name {
-            font-size: 18px;
-            font-weight: 700;
-            margin: 8px 0;
-            color: #333;
-            line-height: 1.3;
-        }
-        .product-price {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 15px 0;
-        }
-        .price-current {
-            font-size: 24px;
-            font-weight: bold;
-            color: #e74c3c;
-        }
-        .price-original {
-            font-size: 16px;
-            text-decoration: line-through;
-            color: #999;
-        }
-        .discount-badge {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: #e74c3c;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .product-features {
-            margin: 15px 0;
-        }
-        .feature-tag {
-            display: inline-block;
-            background: #f0f0f0;
-            padding: 4px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            margin: 2px;
-            color: #666;
-        }
-        .product-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .add-to-cart-btn {
-            flex: 1;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            border: none;
+
+        ::-webkit-scrollbar-thumb {
+            background: #D2D2D7;
             border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            border: 2px solid #FFFFFF;
         }
-        .add-to-cart-btn:hover {
-            background: linear-gradient(135deg, #5a6fd8, #6a4190);
-            transform: translateY(-2px);
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #86868B;
         }
-        .quantity-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin: 10px 0;
+
+        .fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .quantity-btn {
-            width: 30px;
-            height: 30px;
-            border: 2px solid #667eea;
-            background: white;
-            color: #667eea;
-            border-radius: 50%;
-            cursor: pointer;
-            font-weight: bold;
-            transition: all 0.3s ease;
+
+        .slide-up {
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .quantity-btn:hover {
-            background: #667eea;
-            color: white;
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
-        .quantity-input {
-            width: 50px;
-            text-align: center;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            padding: 5px;
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        .cart-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1001;
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
-        .cart-icon {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            position: relative;
-            transition: all 0.3s ease;
+
+        .animate-spin-slow {
+            animation: spin 1.5s linear infinite;
         }
-        .cart-icon:hover {
-            transform: scale(1.1);
-        }
-        .cart-count {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .cart-modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1002;
-        }
-        .cart-content {
-            background: white;
-            width: 90%;
-            max-width: 500px;
-            margin: 50px auto;
-            border-radius: 15px;
-            max-height: 80vh;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-        .cart-header {
-            padding: 20px;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .cart-header h2 {
+
+        /* Checkbox Apple Style */
+        .apple-checkbox {
+            appearance: none;
+            background-color: transparent;
             margin: 0;
-            color: #333;
-        }
-        .close-cart {
-            background: none;
-            border: none;
-            font-size: 24px;
+            font: inherit;
+            color: currentColor;
+            width: 1.4em;
+            height: 1.4em;
+            border: 1.5px solid #D2D2D7;
+            border-radius: 50%;
+            display: grid;
+            place-content: center;
             cursor: pointer;
-            color: #999;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .cart-items {
-            padding: 20px;
-            overflow-y: auto;
-            flex-grow: 1;
+
+        .apple-checkbox::before {
+            content: "";
+            width: 0.7em;
+            height: 0.7em;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em white;
+            background-color: white;
+            transform-origin: center;
+            clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
         }
-        .cart-item {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 15px 0;
-            border-bottom: 1px solid #f0f0f0;
+
+        .apple-checkbox:checked {
+            background-color: #059669;
+            border-color: #059669;
         }
-        .cart-item:last-child {
-            border-bottom: none;
+
+        .apple-checkbox:checked::before {
+            transform: scale(1);
         }
-        .cart-item-image {
-            width: 60px;
-            height: 60px;
-            background: #f0f0f0;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
-        .cart-item-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 8px;
+
+        .bg-mesh {
+            background-color: #f9f9fb;
+            background-image: radial-gradient(at 40% 20%, hsla(28, 100%, 74%, 0.15) 0px, transparent 50%),
+                radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.15) 0px, transparent 50%),
+                radial-gradient(at 0% 50%, hsla(355, 100%, 93%, 0.15) 0px, transparent 50%);
         }
-        .cart-item-info {
-            flex: 1;
+
+        /* Notificações Toasts */
+        .toast-enter {
+            transform: translateX(100%);
+            opacity: 0;
         }
-        .cart-item-name {
-            font-weight: 600;
-            margin-bottom: 5px;
+
+        .toast-enter-active {
+            transform: translateX(0);
+            opacity: 1;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .cart-item-price {
-            color: #e74c3c;
-            font-weight: bold;
+
+        .toast-exit {
+            transform: translateX(0);
+            opacity: 1;
         }
-        .cart-item-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .remove-item {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .cart-total {
-            padding: 20px;
-            border-top: 2px solid #e0e0e0;
-            background: #f8f9fa;
-            /* Destacar o botão finalizar */
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .total-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 18px;
-            font-weight: 600;
-        }
-        .total-final {
-            font-size: 22px;
-            font-weight: 700;
-            color: #333;
-        }
-        .checkout-btn {
-            width: 100%;
-            padding: 18px;
-            background: #25D366;
-            color: white;
-            border: none;
-            border-radius: 15px;
-            font-size: 20px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.3s ease, transform 0.2s ease;
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.7);
-        }
-        .checkout-btn:hover {
-            background: #20BA5A;
-            transform: scale(1.05);
-        }
-        .empty-cart {
-            text-align: center;
-            padding: 40px 20px;
-            color: #999;
-        }
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: white;
-            font-size: 18px;
-        }
-        .no-results {
-            text-align: center;
-            padding: 60px 20px;
-            color: white;
-            font-size: 18px;
-        }
-        @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 15px;
-            }
-            .search-container {
-                max-width: 100%;
-            }
-            .filter-group {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .products-grid {
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 20px;
-            }
+
+        .toast-exit-active {
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s ease-in;
         }
     </style>
 </head>
-<body>
-    <header class="header">
-        <div class="cart-container">
-            <div class="cart-icon" onclick="toggleCart()">
-                🛒
-                <div class="cart-count" id="cartCount">0</div>
+
+<body
+    class="bg-apple-bg text-apple-text font-sans h-screen flex overflow-hidden selection:bg-brand-100 selection:text-brand-900">
+
+    <!-- Container de Notificações -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[400] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen"
+        class="fixed inset-0 bg-white/90 backdrop-blur-md z-[300] flex flex-col items-center justify-center text-apple-text transition-opacity duration-500">
+        <i class="ph ph-circle-notch text-5xl text-brand-500 animate-spin mb-6 font-light"></i>
+        <h2 class="text-2xl font-semibold tracking-tight">A preparar o seu espaço...</h2>
+        <p class="text-apple-textMut text-sm mt-2 font-medium" id="global-loading-text">Sincronizando dados...</p>
+    </div>
+
+    <!-- Login Screen -->
+    <div id="login-screen"
+        class="fixed inset-0 bg-mesh z-[200] flex items-center justify-center text-apple-text hidden">
+        <div
+            class="glass-panel p-10 rounded-[2.5rem] shadow-glass w-full max-w-sm flex flex-col items-center fade-in border border-white/60">
+            <img src="https://erp.grupotuguir.com.br/img/Logo_GrupoTuguir.png" alt="Grupo Tuguir"
+                class="h-16 mb-8 object-contain drop-shadow-md">
+
+            <div class="w-full space-y-5">
+                <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">E-mail</label>
+                    <input type="email" id="login-email"
+                        class="w-full bg-white/50 border border-apple-border rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-400 focus:bg-white outline-none transition-all duration-300"
+                        placeholder="Insira o seu e-mail">
+                </div>
+                <div class="space-y-1.5">
+                    <label
+                        class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">Palavra-passe</label>
+                    <input type="password" id="login-password"
+                        class="w-full bg-white/50 border border-apple-border rounded-2xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-400 focus:bg-white outline-none transition-all duration-300"
+                        placeholder="••••••••">
+                </div>
+
+                <button onclick="fazerLogin()" id="btn-login"
+                    class="w-full bg-apple-text text-white font-medium py-3.5 rounded-2xl hover:bg-black hover:shadow-lg transition-all duration-300 mt-2">
+                    Iniciar Sessão
+                </button>
+                <p id="login-error"
+                    class="text-red-500 text-sm text-center hidden font-medium bg-red-50/50 p-2 rounded-xl"></p>
             </div>
-        </div>
-
-        <div class="cart-modal" id="cartModal">
-            <div class="cart-content">
-                <div class="cart-header">
-                    <h2>🛒 Meu Carrinho</h2>
-                    <button class="close-cart" onclick="toggleCart()">×</button>
-                </div>
-                <div class="cart-items" id="cartItems">
-                    <div class="empty-cart">
-                        <p>🛒 Seu carrinho está vazio</p>
-                        <p>Adicione alguns produtos para continuar!</p>
-                    </div>
-                </div>
-                <div class="cart-total" id="cartTotal" style="display: none;">
-                    <div class="total-row">
-                        <span>Subtotal:</span>
-                        <span id="subtotal">R$ 0,00</span>
-                    </div>
-                    <div class="total-row total-final">
-                        <span>Total:</span>
-                        <span id="total">R$ 0,00</span>
-                    </div>
-                    <button class="checkout-btn" onclick="checkoutWhatsApp()">
-                        📱 Finalizar pelo WhatsApp
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="container">
-            <div class="header-content">
-             <a href="#" class="logo">
-  <img src="https://i.ibb.co/vFNDJPv/Design-sem-nome-1.png" alt="Relógio Store" style="height: 120px;">
-</a>   
-                <div class="search-container">
-                    <input type="text" class="search-input" placeholder="Buscar relógios..." id="searchInput" />
-                    <button class="search-btn" onclick="searchProducts()">🔍</button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <div class="container">
-        <div class="filters">
-            <div class="filter-group">
-                <div class="filter-item">
-                    <label>Marca</label>
-                    <select id="brandFilter" onchange="filterProducts()">
-                        <option value="">Todas as marcas</option>
-                        <option value="Skmei">Skmei</option>
-                        <option value="Tuguir">Tuguir</option>
-                        <option value="Onix">Onix</option>
-                        <option value="Weide">Weide</option>
-                        <option value="Kat-watch">Kat-watch</option>
-                        <option value="curren">Curren</option>
-
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label>Preço</label>
-                    <select id="priceFilter" onchange="filterProducts()">
-                        <option value="">Qualquer preço</option>
-                        <option value="0-200">R$ 0 - R$ 200</option>
-                        <option value="200-500">R$ 200 - R$ 500</option>
-                        <option value="500-1000">R$ 500 - R$ 1.000</option>
-                        <option value="1000+">Acima de R$ 1.000</option>
-                    </select>
-                </div>
-                <div class="filter-item">
-                    <label>Tipo</label>
-                    <select id="typeFilter" onchange="filterProducts()">
-                        <option value="">Todos os tipos</option>
-                        <option value="Digital">Digital</option>
-                        <option value="Analógico">Analógico</option>
-                        <option value="Smartwatch">Smartwatch</option>
-                        <option value="Esportivo">Esportivo</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-
-        <div id="productsContainer">
-            <div class="loading">⏳ Carregando produtos...</div>
         </div>
     </div>
 
-<script>
-    let allProducts = [];
-    let filteredProducts = [];
-    let cart = [];
+    <!-- Sidebar -->
+    <aside class="w-64 bg-transparent flex flex-col hidden md:flex h-full shrink-0 relative z-0">
+        <div class="p-8 pb-4 flex items-center justify-center">
+            <img src="https://erp.grupotuguir.com.br/img/Logo_GrupoTuguir.png" alt="Grupo Tuguir"
+                class="h-10 object-contain drop-shadow-sm hover:scale-105 transition-transform duration-300">
+        </div>
 
-    const WHATSAPP_NUMBER = "5511971171508"; // Substitua pelo seu número real
+        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto" id="main-nav">
+            <!-- Nav Items Generated by JS -->
+        </nav>
 
-    async function fetchAllProducts() {
-        const all = [];
-        let page = 1;
-        const limit = 50;
-        let totalPages = 1;
-
-        try {
-            while (page <= totalPages) {
-                const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
-                const response = await fetch(`https://www.relogiostore.com.br/web_api/products?${params.toString()}`);
-
-                if (!response.ok) {
-                    throw new Error(`Erro na requisição da página ${page}`);
-                }
-
-                const data = await response.json();
-
-                if (data.Products && Array.isArray(data.Products)) {
-                    all.push(...data.Products.map(p => {
-                        const prod = p.Product;
-                        return {
-                            id: parseInt(prod.id),
-                            name: prod.name,
-                            brand: prod.brand || "Marca Desconhecida",
-                            price: parseFloat(prod.price.replace(",", ".")) || 0,
-                            promotionalPrice:
-                                prod.promotional_price && prod.promotional_price !== "0.00"
-                                    ? parseFloat(prod.promotional_price.replace(",", "."))
-                                    : null,
-                            image:
-                                prod.ProductImage && prod.ProductImage.length > 0
-                                    ? prod.ProductImage[0].thumbs && prod.ProductImage[0].thumbs["90"] && prod.ProductImage[0].thumbs["90"].https
-                                        ? prod.ProductImage[0].thumbs["90"].https
-                                        : prod.ProductImage[0].https
-                                    : "",
-                            type: prod.model || "Indefinido",
-                        };
-                    }));
-                }
-
-                if (data.paging && data.paging.total && data.paging.limit) {
-                    totalPages = Math.ceil(data.paging.total / data.paging.limit);
-                }
-
-                page++;
-            }
-
-            return all;
-        } catch (error) {
-            console.error("Erro ao buscar produtos:", error);
-            return [];
-        }
-    }
-
-    function renderProducts(products) {
-        const container = document.getElementById("productsContainer");
-
-        if (products.length === 0) {
-            container.innerHTML = '<div class="no-results">🔍 Nenhum produto encontrado</div>';
-            return;
-        }
-
-        const productsHTML = products
-            .map(
-                (product) => `
-            <div class="product-card">
-                ${
-                    product.promotionalPrice && product.promotionalPrice < product.price
-                        ? `<div class="discount-badge">-${Math.round(100 - (product.promotionalPrice / product.price) * 100)}%</div>`
-                        : ""
-                }
-                <div class="product-image">
-                    <img src="${product.image}" alt="${product.name}" onerror="this.style.display='none'">
+        <div class="p-6 mt-auto">
+            <div
+                class="glass-panel rounded-2xl p-3 flex items-center justify-between border border-apple-border/50 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-full bg-gradient-to-tr from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold shadow-sm">
+                        AT
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-apple-text">Atendimento</p>
+                        <p class="text-xs font-medium text-apple-textMut" id="clock-display">00:00</p>
+                    </div>
                 </div>
-                <div class="product-info">
-                    <div class="product-brand">${product.brand}</div>
-                    <div class="product-name">${product.name}</div>
-                    <div class="product-price">
-                        <span class="price-current">R$ ${product.promotionalPrice && product.promotionalPrice < product.price ? product.promotionalPrice.toFixed(2).replace(".", ",") : product.price.toFixed(2).replace(".", ",")}</span>
-                        ${
-                            product.promotionalPrice && product.promotionalPrice < product.price
-                                ? `<span class="price-original">R$ ${product.price.toFixed(2).replace(".", ",")}</span>`
-                                : ""
-                        }
-                    </div>
-                    <div class="quantity-selector">
-                        <button class="quantity-btn" onclick="changeQuantity(${product.id}, -1)">−</button>
-                        <input type="number" class="quantity-input" id="qty-${product.id}" value="1" min="1" max="99" />
-                        <button class="quantity-btn" onclick="changeQuantity(${product.id}, 1)">+</button>
-                    </div>
-                    <div class="product-actions">
-                        <button class="add-to-cart-btn" onclick="addToCart(${product.id})">🛒 Adicionar</button>
-                    </div>
+                <button onclick="fazerLogout()"
+                    class="text-apple-textMut hover:text-red-500 p-2 transition-colors rounded-full hover:bg-red-50"
+                    title="Sair">
+                    <i class="ph ph-sign-out text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area (Floating White Panel) -->
+    <main class="flex-1 flex flex-col h-full py-4 pr-4 pl-0 relative z-10">
+        <div
+            class="bg-white h-full w-full rounded-[2rem] shadow-apple flex flex-col overflow-hidden border border-apple-border/30 relative">
+
+            <!-- Header -->
+            <header
+                class="h-20 flex items-center justify-between px-8 shrink-0 border-b border-apple-border/30 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+                <h2 id="page-title" class="text-2xl font-bold text-apple-text tracking-tight">Visão Geral</h2>
+                <div class="flex items-center gap-3" id="global-actions">
+                    <button onclick="openImportModal()"
+                        class="bg-apple-bg hover:bg-gray-200 text-apple-text px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 transition-colors">
+                        <i class="ph ph-upload-simple text-lg"></i> Importar Dados
+                    </button>
+                    <button onclick="openNovoLeadModal()"
+                        class="bg-apple-text hover:bg-black text-white px-5 py-2.5 rounded-full text-sm font-semibold flex items-center gap-2 transition-all shadow-sm hover:shadow-md">
+                        <i class="ph ph-plus-bold text-lg"></i> Novo Registo
+                    </button>
+                </div>
+            </header>
+
+            <!-- Dynamic Content -->
+            <div id="app-content" class="flex-1 overflow-y-auto p-8 relative scroll-smooth bg-white"></div>
+
+        </div>
+    </main>
+
+    <!-- Modals -->
+    <!-- Modal Novo Lead -->
+    <div id="modal-novo-lead"
+        class="fixed inset-0 bg-black/20 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity">
+        <div
+            class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl m-4 overflow-hidden slide-up border border-white/50">
+            <div
+                class="px-8 py-6 border-b border-apple-border/30 flex justify-between items-center bg-white/80 backdrop-blur-sm">
+                <h3 class="font-bold text-xl text-apple-text tracking-tight">Registar Contacto</h3>
+                <button onclick="closeModal('modal-novo-lead')"
+                    class="bg-apple-bg hover:bg-gray-200 p-2 rounded-full transition-colors text-apple-textMut"><i
+                        class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="p-8 grid grid-cols-2 gap-6 bg-white">
+                <div class="col-span-2 sm:col-span-1">
+                    <label class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">Nome / Empresa
+                        *</label>
+                    <input type="text" id="fnome"
+                        class="w-full bg-apple-bg border-none rounded-2xl px-4 py-3 mt-1.5 text-sm focus:ring-2 focus:ring-brand-400 outline-none transition-all">
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                    <label class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">Telefone
+                        *</label>
+                    <input type="text" id="ftel"
+                        class="w-full bg-apple-bg border-none rounded-2xl px-4 py-3 mt-1.5 text-sm focus:ring-2 focus:ring-brand-400 outline-none transition-all">
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                    <label class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">Tipo de
+                        Cliente</label>
+                    <select id="ftipo"
+                        class="w-full bg-apple-bg border-none rounded-2xl px-4 py-3 mt-1.5 text-sm focus:ring-2 focus:ring-brand-400 outline-none transition-all appearance-none cursor-pointer">
+                        <option value="Normal">Normal</option>
+                        <option value="VIP">VIP</option>
+                    </select>
+                </div>
+                <div class="col-span-2 sm:col-span-1">
+                    <label class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">Origem /
+                        Categoria</label>
+                    <select id="forigem"
+                        class="w-full bg-apple-bg border-none rounded-2xl px-4 py-3 mt-1.5 text-sm focus:ring-2 focus:ring-brand-400 outline-none transition-all appearance-none cursor-pointer">
+                        <option value="Novo Contato">Novo Contato (Orgânico)</option>
+                        <option value="Comprado">Lead Comprado</option>
+                        <option value="Carrinho Abandonado">Carrinho Abandonado</option>
+                    </select>
                 </div>
             </div>
-        `
-            )
-            .join("");
+            <div class="px-8 py-6 border-t border-apple-border/30 bg-apple-bg/50 flex justify-end gap-3">
+                <button onclick="closeModal('modal-novo-lead')"
+                    class="px-6 py-2.5 bg-white text-apple-text font-semibold rounded-full border border-apple-border hover:bg-gray-50 transition-colors">Cancelar</button>
+                <button onclick="salvarNovoLead()"
+                    class="px-6 py-2.5 bg-apple-text text-white font-semibold rounded-full hover:bg-black transition-all shadow-sm">Guardar
+                    Registo</button>
+            </div>
+        </div>
+    </div>
 
-        container.innerHTML = `<div class="products-grid">${productsHTML}</div>`;
-    }
+    <!-- Modal Importação -->
+    <div id="modal-import"
+        class="fixed inset-0 bg-black/20 backdrop-blur-md hidden items-center justify-center z-50 transition-opacity">
+        <div
+            class="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl m-4 overflow-hidden slide-up border border-white/50 flex flex-col max-h-[90vh]">
+            <div
+                class="px-8 py-6 border-b border-apple-border/30 flex justify-between items-center bg-white/80 backdrop-blur-sm shrink-0">
+                <h3 class="font-bold text-xl text-apple-text tracking-tight">Importar Dados ao Sistema</h3>
+                <button onclick="closeModal('modal-import')"
+                    class="bg-apple-bg hover:bg-gray-200 p-2 rounded-full transition-colors text-apple-textMut"><i
+                        class="ph ph-x text-lg"></i></button>
+            </div>
 
-    function filterProducts() {
-        const brandFilter = document.getElementById("brandFilter").value;
-        const priceFilter = document.getElementById("priceFilter").value;
-        const typeFilter = document.getElementById("typeFilter").value;
-        const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+            <div class="p-8 overflow-y-auto bg-white flex-1">
 
-        filteredProducts = allProducts.filter((product) => {
-            const matchesBrand = !brandFilter || product.brand === brandFilter;
-            const matchesType = !typeFilter || product.type === typeFilter;
-            const matchesSearch =
-                !searchTerm ||
-                product.name.toLowerCase().includes(searchTerm) ||
-                product.brand.toLowerCase().includes(searchTerm);
+                <!-- IMPORTAR ARQUIVO COM PAPAPARSE -->
+                <div class="bg-apple-bg/30 border border-apple-border/50 rounded-2xl p-6">
+                    <h4 class="font-bold text-apple-text text-lg flex items-center gap-2 mb-2"><i
+                            class="ph ph-file-csv text-brand-500"></i> Importar Arquivo (Excel/CSV)</h4>
+                    <p class="text-sm text-apple-textMut mb-6 font-medium">Selecione o formato dos dados e adicione o
+                        seu arquivo. O sistema ignora duplicados automaticamente.</p>
 
-            let matchesPrice = true;
-            if (priceFilter) {
-                const price = product.promotionalPrice && product.promotionalPrice < product.price ? product.promotionalPrice : product.price;
-                switch (priceFilter) {
-                    case "0-200":
-                        matchesPrice = price >= 0 && price <= 200;
-                        break;
-                    case "200-500":
-                        matchesPrice = price > 200 && price <= 500;
-                        break;
-                    case "500-1000":
-                        matchesPrice = price > 500 && price <= 1000;
-                        break;
-                    case "1000+":
-                        matchesPrice = price > 1000;
-                        break;
-                }
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="col-span-2 md:col-span-1">
+                            <label class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">Layout
+                                do Arquivo</label>
+                            <select id="colar-layout"
+                                class="w-full bg-white border border-apple-border rounded-xl px-4 py-3 mt-1.5 text-sm outline-none transition-all cursor-pointer font-medium text-apple-text focus:ring-2 focus:ring-brand-400">
+                                <option value="clientes">Base de Clientes (Código, Nome...)</option>
+                                <option value="leads">Leads Atacado (CNPJ, Fantasia, Bairro...)</option>
+                                <option value="simples">Lista Simples (Nome, Telefone)</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 md:col-span-1">
+                            <label
+                                class="text-xs font-semibold text-apple-textMut uppercase tracking-wider pl-1">Classificar
+                                como</label>
+                            <select id="colar-tipo"
+                                class="w-full bg-white border border-apple-border rounded-xl px-4 py-3 mt-1.5 text-sm outline-none transition-all cursor-pointer font-medium text-apple-text focus:ring-2 focus:ring-brand-400">
+                                <option value="Normal">Normal</option>
+                                <option value="VIP">VIP</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- INPUT ESCONDIDO FORA DA ZONA DE CLIQUE (Fim do Bug do Loop) -->
+                    <input type="file" id="csv-file-input" class="hidden" accept=".csv,.txt,.xlsx,.xls"
+                        onchange="window.handleFileSelect(this.files[0])">
+
+                    <!-- Drag and Drop BLINDADO com Eventos Inline -->
+                    <div id="drop-zone" onclick="document.getElementById('csv-file-input').click()"
+                        ondragover="event.preventDefault(); this.classList.add('border-brand-500', 'bg-brand-50');"
+                        ondragleave="event.preventDefault(); this.classList.remove('border-brand-500', 'bg-brand-50');"
+                        ondrop="event.preventDefault(); this.classList.remove('border-brand-500', 'bg-brand-50'); if(event.dataTransfer.files[0]) window.handleFileSelect(event.dataTransfer.files[0]);"
+                        class="border-2 border-dashed border-apple-border hover:border-brand-500 hover:bg-brand-50 rounded-[1.5rem] p-6 text-center cursor-pointer transition-all duration-300 bg-white group relative mb-4">
+
+                        <div
+                            class="w-12 h-12 bg-apple-bg group-hover:bg-white rounded-full flex items-center justify-center mx-auto mb-2 transition-colors pointer-events-none">
+                            <i
+                                class="ph ph-upload-simple text-xl text-apple-textMut group-hover:text-brand-500 transition-colors"></i>
+                        </div>
+                        <p class="text-sm font-bold text-apple-text pointer-events-none">Clique ou arraste o arquivo
+                            .csv / .xlsx aqui</p>
+                        <p
+                            class="text-[10px] text-brand-500 mt-1 font-bold pointer-events-none bg-brand-50 inline-block px-2 py-1 rounded-full">
+                            Suporta CSV, TXT e Excel</p>
+                    </div>
+
+                    <div id="file-name-container"
+                        class="mt-2 mb-4 hidden p-3 bg-brand-50 rounded-xl border border-brand-100 items-center justify-center gap-2">
+                        <i class="ph-fill ph-file-csv text-brand-500 text-lg"></i>
+                        <p id="file-name" class="text-xs text-brand-700 font-bold truncate max-w-[200px]"></p>
+                        <button onclick="window.limparArquivo()"
+                            class="ml-auto text-brand-500 hover:text-brand-700 p-1 bg-white rounded-full shadow-sm"><i
+                                class="ph ph-x text-sm font-bold"></i></button>
+                    </div>
+
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="h-px bg-apple-border flex-1"></div>
+                        <span class="text-[10px] font-bold text-apple-textMut uppercase tracking-widest">OU COLE OS
+                            DADOS (TESTE AQUI)</span>
+                        <div class="h-px bg-apple-border flex-1"></div>
+                    </div>
+
+                    <textarea id="texto-csv"
+                        oninput="document.getElementById('btn-processar-csv').disabled = this.value.trim().length === 0"
+                        placeholder="Copie do Excel e cole todo o texto aqui..."
+                        class="w-full h-32 bg-apple-bg/50 border border-apple-border/50 rounded-xl p-4 text-sm font-mono outline-none focus:ring-2 focus:ring-brand-400 transition-all resize-none shadow-inner"></textarea>
+
+                    <button onclick="processarArquivoCSV()" id="btn-processar-csv"
+                        class="w-full mt-6 bg-brand-600 hover:bg-brand-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-sm flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-brand-600"
+                        disabled>
+                        <i class="ph ph-check-circle text-lg"></i> Iniciar Importação
+                    </button>
+
+                    <div class="flex items-center gap-4 mt-6 mb-4">
+                        <div class="h-px bg-apple-border flex-1"></div>
+                        <span class="text-[10px] font-bold text-apple-textMut uppercase tracking-widest">OU IMPORTE POR
+                            PASTA</span>
+                        <div class="h-px bg-apple-border flex-1"></div>
+                    </div>
+                    <button onclick="closeModal('modal-import'); navigate('pastas');"
+                        class="w-full bg-apple-text hover:bg-black text-white font-bold py-3.5 rounded-xl transition-all shadow-sm flex justify-center items-center gap-2">
+                        <i class="ph ph-folder-open text-lg"></i> Ir para Gestão de Pastas
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, onSnapshot, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDoDSwkJ-znIdsL3DpdYAiRqvl8wzEuqkA",
+            authDomain: "relogiostore-3d7e7.firebaseapp.com",
+            projectId: "relogiostore-3d7e7",
+            storageBucket: "relogiostore-3d7e7.firebasestorage.app",
+            messagingSenderId: "829089371669",
+            appId: "1:829089371669:web:c828b7543e30ec32eea01c"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "relogiostore-3d7e7";
+
+        // Global State
+        let currentUser = null;
+        let allLeads = [];
+        let rotinaTasks = [];
+        let currentView = 'dashboard';
+        const hoje = new Date().toISOString().split('T')[0];
+
+        // State - Gestão de Pastas
+        let lastImportTimestamps = { normal: null, vip: null, comprado: null };
+        let folderFiles = { normal: null, vip: null, comprado: null };
+
+        // Global State - Catálogo
+        let catalogProducts = [];
+        let catalogFiltered = [];
+        let catSearch = "";
+        let hasCnpj = false;
+        let isCatalogLoaded = false;
+        let isGeneratingPdf = false;
+        const API_CATALOG = "https://www.relogiostorevip.com.br/web_api";
+
+        // --- SISTEMA DE TOASTS ---
+        window.showToast = (message, type = 'success') => {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            let bgClass = "bg-apple-text";
+            let icon = "ph-check-circle";
+
+            if (type === 'error') { bgClass = "bg-red-500"; icon = "ph-warning-circle"; }
+            if (type === 'info') { bgClass = "bg-brand-500"; icon = "ph-info"; }
+            if (type === 'warning') { bgClass = "bg-amber-500"; icon = "ph-warning"; }
+
+            toast.className = `${bgClass} text-white px-6 py-4 rounded-2xl shadow-apple flex items-center gap-3 min-w-[300px] toast-enter pointer-events-auto border border-white/10`;
+            toast.innerHTML = `<i class="ph ${icon} text-xl flex-shrink-0"></i><span class="text-sm font-medium leading-snug">${message}</span>`;
+
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('toast-enter');
+                toast.classList.add('toast-enter-active');
+            });
+
+            setTimeout(() => {
+                toast.classList.remove('toast-enter-active');
+                toast.classList.add('toast-exit-active');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        };
+
+        // --- RELÓGIO CLOCK ---
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('clock-display').innerText = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+        }, 1000);
+
+        // --- AUTH ---
+        window.fazerLogin = async () => {
+            const e = document.getElementById('login-email').value, p = document.getElementById('login-password').value, err = document.getElementById('login-error');
+            const btn = document.getElementById('btn-login');
+            if (!e || !p) return err.innerText = "Por favor, preencha os dados.", err.classList.remove('hidden');
+
+            btn.innerHTML = '<i class="ph ph-spinner-gap animate-spin text-lg inline-block"></i>';
+            try { await signInWithEmailAndPassword(auth, e, p); }
+            catch (error) { err.innerText = "Credenciais inválidas.", err.classList.remove('hidden'); btn.innerText = 'Iniciar Sessão'; }
+        };
+        window.fazerLogout = () => signOut(auth);
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('loading-screen').classList.remove('hidden');
+                setupListeners();
+            } else {
+                currentUser = null;
+                document.getElementById('login-screen').classList.remove('hidden');
+                document.getElementById('loading-screen').classList.add('hidden');
             }
-
-            return matchesBrand && matchesType && matchesPrice && matchesSearch;
         });
 
-        renderProducts(filteredProducts);
-    }
+        // --- DATA LAYER ---
+        function setupListeners() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'leads_v2'), (snapshot) => {
+                allLeads = snapshot.docs.map(d => ({ dbId: d.id, ...d.data() }));
+                allLeads = allLeads.map(lead => ({ ...lead, classe: classificarCliente(lead) }));
 
-    function searchProducts() {
-        filterProducts();
-    }
+                document.getElementById('loading-screen').classList.add('hidden');
+                renderNav();
+                if (currentView !== 'catalogo') renderCurrentView();
+            });
 
-    function changeQuantity(productId, change) {
-        const input = document.getElementById(`qty-${productId}`);
-        let currentValue = parseInt(input.value) || 1;
-        let newValue = Math.max(1, Math.min(99, currentValue + change));
-        input.value = newValue;
-    }
-
-    function addToCart(productId) {
-        const product = allProducts.find((p) => p.id === productId);
-        const quantity = parseInt(document.getElementById(`qty-${productId}`).value) || 1;
-
-        const existingItem = cart.find((item) => item.id === productId);
-
-        if (existingItem) {
-            existingItem.quantity += quantity;
-        } else {
-            cart.push({
-                ...product,
-                quantity: quantity,
+            onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'checklists_v2', hoje), (docSnap) => {
+                if (docSnap.exists() && docSnap.data().tasks) {
+                    rotinaTasks = docSnap.data().tasks;
+                } else {
+                    rotinaTasks = [
+                        { id: 't1', title: '07:40 - 08:45 | Início: WhatsApp (mensagens noite) e Insta', done: false, doneAt: null },
+                        { id: 't2', title: '08:45 - 09:00 | ☕ Pausa: Café da Manhã', done: false, doneAt: null },
+                        { id: 't3', title: '09:00 - 11:00 | Vendas: Postar VIP e Ligar Leads Frios', done: false, doneAt: null },
+                        { id: 't4', title: '11:00 - 13:20 | Site: Carrinhos e Campanhas', done: false, doneAt: null },
+                        { id: 't5', title: '13:20 - 14:20 | 🍽️ Pausa: Almoço', done: false, doneAt: null },
+                        { id: 't6', title: '14:20 - 16:30 | Follow-up: Pós-Venda e Atendimento', done: false, doneAt: null },
+                        { id: 't7', title: '16:30 - 16:45 | ☕ Pausa: Café da Tarde', done: false, doneAt: null },
+                        { id: 't8', title: '16:45 - 17:00 | Fecho: Atualizar Etiquetas (CRM)', done: false, doneAt: null }
+                    ];
+                }
+                if (currentView === 'dashboard') renderDashboard(document.getElementById('app-content'));
             });
         }
 
-        updateCartDisplay();
+        function classificarCliente(lead) {
+            const hojeData = new Date(hoje);
+            const dataCadastro = new Date(lead.dataEntrada || hoje);
+            const dataCompra = lead.dataUltimaCompra ? new Date(lead.dataUltimaCompra) : null;
+            const diffCadastro = Math.floor((hojeData - dataCadastro) / (1000 * 60 * 60 * 24));
+            const diffCompra = dataCompra ? Math.floor((hojeData - dataCompra) / (1000 * 60 * 60 * 24)) : Infinity;
 
-        const btn = event.target;
-        const originalText = btn.textContent;
-        btn.textContent = "✅ Adicionado!";
-        btn.style.background = "#28a745";
+            if (lead.origem === 'Carrinho Abandonado') return 'Carrinho';
+            if (lead.origem === 'Comprado') return 'Lead Frio';
+            if (dataCompra && diffCompra <= 7) return 'Pós-Venda';
+            if (dataCompra && diffCompra <= 30) return 'Ativo';
+            if (dataCompra && diffCompra > 30 && diffCompra <= 90) return 'Risco Inatividade';
+            if (dataCompra && diffCompra > 90) return 'Inativo';
+            if (diffCadastro <= 7 && !dataCompra) return 'Novo Lead';
 
-        setTimeout(() => {
-            btn.textContent = originalText;
-            btn.style.background = "";
-        }, 1500);
-    }
-
-    function removeFromCart(productId) {
-        cart = cart.filter((item) => item.id !== productId);
-        updateCartDisplay();
-    }
-
-    function updateCartQuantity(productId, newQuantity) {
-        if (newQuantity <= 0) {
-            removeFromCart(productId);
-            return;
+            return 'Prospect';
         }
 
-        const item = cart.find((item) => item.id === productId);
-        if (item) {
-            item.quantity = newQuantity;
-            updateCartDisplay();
+        // --- NAVIGATION ---
+        const views = [
+            { id: 'dashboard', icon: 'ph-squares-four', label: 'Dashboard' },
+            { id: 'catalogo', icon: 'ph-package', label: 'Catálogo & Estoque' },
+            { id: 'carrinhos', icon: 'ph-shopping-cart', label: 'Carrinhos', badge: () => allLeads.filter(l => l.classe === 'Carrinho' && l.status !== 'Convertido').length },
+            { id: 'comprados', icon: 'ph-users', label: 'Leads Comprados' },
+            { id: 'pastas', icon: 'ph-folder-open', label: 'Gestão de Pastas' },
+            { id: 'base', icon: 'ph-database', label: 'Base de Clientes' }
+        ];
+
+        window.navigate = (viewId) => {
+            currentView = viewId;
+            renderNav();
+
+            if (currentView === 'catalogo') {
+                document.getElementById('global-actions').style.display = 'none';
+            } else {
+                document.getElementById('global-actions').style.display = 'flex';
+            }
+
+            renderCurrentView();
+        };
+
+        function renderNav() {
+            const nav = document.getElementById('main-nav');
+            nav.innerHTML = views.map(v => {
+                const isActive = currentView === v.id;
+                const badgeStr = v.badge && v.badge() > 0 ? `<span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-auto shadow-sm">${v.badge()}</span>` : '';
+                return `
+                <button onclick="navigate('${v.id}')" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 ${isActive ? 'bg-white text-apple-text shadow-sm border border-apple-border/50' : 'text-apple-textMut hover:bg-black/5 hover:text-apple-text'}">
+                    <i class="ph ${v.icon} text-xl ${isActive ? 'text-brand-500' : ''}"></i> ${v.label} ${badgeStr}
+                </button>
+                `;
+            }).join('');
         }
-    }
 
-    function updateCartDisplay() {
-        const cartCount = document.getElementById("cartCount");
-        const cartItems = document.getElementById("cartItems");
-        const cartTotal = document.getElementById("cartTotal");
+        function renderCurrentView() {
+            const c = document.getElementById('app-content');
+            if (currentView === 'dashboard') renderDashboard(c);
+            if (currentView === 'catalogo') renderCatalogo(c);
+            if (currentView === 'carrinhos') renderCarrinhos(c);
+            if (currentView === 'comprados') renderComprados(c);
+            if (currentView === 'pastas') renderPastas(c);
+            if (currentView === 'base') renderBase(c);
+        }
 
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        cartCount.textContent = totalItems;
-        cartCount.style.display = totalItems > 0 ? "flex" : "none";
+        // --- VIEWS RENDERERS ---
 
-        if (cart.length === 0) {
-            cartItems.innerHTML = `
-                <div class="empty-cart">
-                    <p>🛒 Seu carrinho está vazio</p>
-                    <p>Adicione alguns produtos para continuar!</p>
+        function renderDashboard(c) {
+            document.getElementById('page-title').innerText = "Dashboard Inteligente";
+            const stats = {
+                normal: {
+                    novos: allLeads.filter(l => l.tipoCliente !== 'VIP' && l.classe === 'Novo Lead').length,
+                    posvenda: allLeads.filter(l => l.tipoCliente !== 'VIP' && l.classe === 'Pós-Venda').length,
+                    ativos: allLeads.filter(l => l.tipoCliente !== 'VIP' && l.classe === 'Ativo').length,
+                    risco: allLeads.filter(l => l.tipoCliente !== 'VIP' && l.classe === 'Risco Inatividade').length,
+                    inativos: allLeads.filter(l => l.tipoCliente !== 'VIP' && l.classe === 'Inativo').length,
+                },
+                vip: {
+                    novos: allLeads.filter(l => l.tipoCliente === 'VIP' && l.classe === 'Novo Lead').length,
+                    posvenda: allLeads.filter(l => l.tipoCliente === 'VIP' && l.classe === 'Pós-Venda').length,
+                    ativos: allLeads.filter(l => l.tipoCliente === 'VIP' && l.classe === 'Ativo').length,
+                    risco: allLeads.filter(l => l.tipoCliente === 'VIP' && l.classe === 'Risco Inatividade').length,
+                    inativos: allLeads.filter(l => l.tipoCliente === 'VIP' && l.classe === 'Inativo').length,
+                }
+            };
+
+            const CardKPI = (title, valNormal, valVip, icon, colorClass) => `
+                <div class="bg-apple-bg/50 p-6 rounded-[1.5rem] border border-apple-border/30 hover:shadow-apple-hover transition-all duration-300 flex flex-col justify-between group">
+                    <div class="flex items-center justify-between mb-4">
+                        <p class="text-xs font-bold text-apple-textMut uppercase tracking-wider">${title}</p>
+                        <div class="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i class="ph ${icon} ${colorClass} text-lg"></i>
+                        </div>
+                    </div>
+                    <div class="flex gap-6 items-end">
+                        <div><p class="text-3xl font-bold text-apple-text tracking-tight">${valNormal}</p><p class="text-[10px] text-apple-textMut uppercase font-semibold mt-1">Normal</p></div>
+                        <div class="border-l border-apple-border/50 pl-6"><p class="text-3xl font-bold text-vip-600 tracking-tight">${valVip}</p><p class="text-[10px] text-vip-400 uppercase font-semibold mt-1">VIP</p></div>
+                    </div>
+                </div>`;
+
+            c.innerHTML = `
+                <div class="slide-up space-y-8 max-w-[1400px] mx-auto pb-10">
+                    
+                    <!-- Links Rápidos -->
+                    <div>
+                        <h3 class="text-lg font-bold text-apple-text mb-4">Acessos Rápidos</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <a href="https://erp.grupotuguir.com.br/login.php" target="_blank" class="group bg-gradient-to-br from-slate-800 to-slate-900 p-5 rounded-[1.5rem] text-white flex items-center gap-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                                <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md group-hover:bg-white/20 transition-colors"><i class="ph ph-package text-2xl"></i></div>
+                                <div><h4 class="font-bold">ERP Tuguir</h4><p class="text-xs text-white/60 font-medium">Verificar Estoque & Produtos</p></div>
+                                <i class="ph ph-arrow-up-right ml-auto opacity-50 group-hover:opacity-100 transition-opacity"></i>
+                            </a>
+                            <a href="https://www.relogiostore.com.br/" target="_blank" class="group bg-gradient-to-br from-brand-500 to-brand-600 p-5 rounded-[1.5rem] text-white flex items-center gap-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                                <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md group-hover:bg-white/20 transition-colors"><i class="ph ph-storefront text-2xl"></i></div>
+                                <div><h4 class="font-bold">Loja Aberta</h4><p class="text-xs text-white/60 font-medium">Relógio Store Normal</p></div>
+                                <i class="ph ph-arrow-up-right ml-auto opacity-50 group-hover:opacity-100 transition-opacity"></i>
+                            </a>
+                            <a href="https://www.relogiostorevip.com.br/" target="_blank" class="group bg-gradient-to-br from-vip-600 to-vip-800 p-5 rounded-[1.5rem] text-white flex items-center gap-4 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                                <div class="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md group-hover:bg-white/20 transition-colors"><i class="ph ph-crown text-2xl"></i></div>
+                                <div><h4 class="font-bold">Loja VIP</h4><p class="text-xs text-white/60 font-medium">Acesso Fechado</p></div>
+                                <i class="ph ph-arrow-up-right ml-auto opacity-50 group-hover:opacity-100 transition-opacity"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Rotina & KPIs Lado a Lado -->
+                    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                        
+                        <!-- Coluna Esquerda: Checklist & Calendário -->
+                        <div class="xl:col-span-1 flex flex-col gap-6">
+                            
+                            <!-- Rotina Diária (Checklist) -->
+                            <div class="bg-apple-bg/40 border border-apple-border/40 rounded-[2rem] overflow-hidden shadow-sm flex flex-col max-h-[450px]">
+                                <div class="p-6 border-b border-apple-border/30 flex items-center gap-4 bg-white/50 backdrop-blur-md">
+                                    <div class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-brand-500 shrink-0">
+                                        <i class="ph ph-list-checks text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-lg text-apple-text tracking-tight">Checklist Diário</h3>
+                                        <p class="text-[11px] font-medium text-apple-textMut mt-0.5 uppercase tracking-wider">Das 07:40 às 17:00</p>
+                                    </div>
+                                </div>
+                                <div class="p-3 flex-1 overflow-y-auto space-y-1.5 bg-white">
+                                    ${rotinaTasks.map(t => {
+                const parts = t.title.split('|');
+                const timeHTML = parts.length > 1 ? `<span class="font-bold text-brand-600 mr-1">${parts[0].trim()}</span> <span class="text-apple-border mx-0.5">|</span> ` : '';
+                const titleHTML = parts.length > 1 ? parts[1].trim() : t.title;
+
+                return `
+                                        <div class="group flex items-center justify-between p-3 bg-apple-bg/30 rounded-xl hover:bg-apple-bg transition-colors border border-transparent hover:border-apple-border/30 cursor-pointer" onclick="document.getElementById('${t.id}').click()">
+                                            <label class="flex items-center gap-3 cursor-pointer flex-1 min-w-0" onclick="event.stopPropagation()">
+                                                <input type="checkbox" id="${t.id}" class="apple-checkbox shrink-0" ${t.done ? 'checked' : ''} onchange="toggleTaskDone('${t.id}', this.checked)">
+                                                <span class="text-xs truncate transition-colors duration-300 ${t.done ? 'text-apple-textMut line-through' : 'text-apple-text font-medium'}">
+                                                    ${timeHTML} ${titleHTML}
+                                                </span>
+                                            </label>
+                                            ${t.done && t.doneAt ? `<span class="shrink-0 bg-brand-50 text-brand-700 text-[10px] font-bold px-2 py-1 rounded-full border border-brand-100 fade-in flex items-center gap-1">${t.doneAt}</span>` : ''}
+                                        </div>
+                                        `;
+            }).join('')}
+                                </div>
+                            </div>
+
+                            <!-- Calendário Sazonal -->
+                            <div class="bg-apple-bg/40 border border-apple-border/40 rounded-[2rem] p-6 shadow-sm">
+                                <div class="flex items-center gap-4 mb-5">
+                                    <div class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-orange-500 shrink-0">
+                                        <i class="ph ph-calendar-star text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="font-bold text-lg text-apple-text tracking-tight">Datas Sazonais</h3>
+                                        <p class="text-[11px] font-medium text-apple-textMut mt-0.5 uppercase tracking-wider">Atenção às Vendas</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-apple-border/20">
+                                        <div class="bg-emerald-50 text-emerald-600 font-bold text-xs px-2 py-1.5 rounded-lg shrink-0 w-14 text-center">05 Mar</div>
+                                        <p class="text-sm font-semibold text-apple-text">Pagamento (5º Dia Útil)</p>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-apple-border/20">
+                                        <div class="bg-purple-50 text-purple-600 font-bold text-xs px-2 py-1.5 rounded-lg shrink-0 w-14 text-center">08 Mar</div>
+                                        <p class="text-sm font-semibold text-apple-text">Dia da Mulher</p>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-apple-border/20">
+                                        <div class="bg-blue-50 text-blue-600 font-bold text-xs px-2 py-1.5 rounded-lg shrink-0 w-14 text-center">15 Mar</div>
+                                        <p class="text-sm font-semibold text-apple-text">Dia do Consumidor</p>
+                                    </div>
+                                    <div class="flex items-center gap-3 p-3 bg-white rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.02)] border border-apple-border/20">
+                                        <div class="bg-pink-50 text-pink-600 font-bold text-xs px-2 py-1.5 rounded-lg shrink-0 w-14 text-center">10 Mai</div>
+                                        <p class="text-sm font-semibold text-apple-text">Dia das Mães</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- KPIs -->
+                        <div class="xl:col-span-2 space-y-8">
+                            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                ${CardKPI('Pós-Venda', stats.normal.posvenda, stats.vip.posvenda, 'ph-gift', 'text-brand-500')}
+                                ${CardKPI('Ativos (<30d)', stats.normal.ativos, stats.vip.ativos, 'ph-fire', 'text-rose-500')}
+                                ${CardKPI('Risco (>30d)', stats.normal.risco, stats.vip.risco, 'ph-warning-circle', 'text-orange-500')}
+                                ${CardKPI('Inativos (>90d)', stats.normal.inativos, stats.vip.inativos, 'ph-snowflake', 'text-blue-400')}
+                            </div>
+                            
+                            <!-- Gráfico -->
+                            <div class="bg-apple-bg/30 p-8 rounded-[2rem] border border-apple-border/30 shadow-sm">
+                                <h3 class="font-bold text-apple-text mb-6 flex items-center gap-2 text-lg"><i class="ph ph-map-pin text-brand-500"></i> Distribuição por Estado</h3>
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6" id="chart-estados">
+                                    <!-- JS will populate -->
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
             `;
-            cartTotal.style.display = "none";
-            return;
-        }
 
-        const cartHTML = cart
-            .map(
-                (item) => `
-            <div class="cart-item">
-                <div class="cart-item-image">
-                    <img src="${item.image}" alt="${item.name}" onerror="this.style.display='none'">
+            // State chart logic
+            const ufs = {};
+            allLeads.forEach(l => { if (l.uf) { ufs[l.uf] = (ufs[l.uf] || 0) + 1; } });
+            const sortedUfs = Object.entries(ufs).sort((a, b) => b[1] - a[1]).slice(0, 8);
+            const maxVal = sortedUfs[0]?.[1] || 1;
+
+            document.getElementById('chart-estados').innerHTML = sortedUfs.map(([uf, count]) => `
+                <div class="group">
+                    <div class="flex justify-between text-sm mb-2"><span class="font-bold text-apple-text">${uf}</span><span class="text-apple-textMut font-medium">${count}</span></div>
+                    <div class="w-full bg-apple-border/40 rounded-full h-2.5 overflow-hidden"><div class="bg-gradient-to-r from-brand-400 to-brand-600 h-full rounded-full transition-all duration-1000 ease-out group-hover:opacity-80" style="width: ${(count / maxVal) * 100}%"></div></div>
                 </div>
-                <div class="cart-item-info">
-                    <div class="cart-item-name">${item.name}</div>
-                    <div class="cart-item-price">R$ ${item.price.toFixed(2).replace(".", ",")}</div>
+            `).join('') || '<p class="text-sm text-apple-textMut col-span-4 py-4 font-medium">Sem dados regionais suficientes recolhidos no sistema.</p>';
+        }
+
+        window.toggleTaskDone = async (taskId, isDone) => {
+            const index = rotinaTasks.findIndex(t => t.id === taskId);
+            if (index > -1) {
+                rotinaTasks[index].done = isDone;
+                rotinaTasks[index].doneAt = isDone ? new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' }) : null;
+
+                if (currentView === 'dashboard') renderDashboard(document.getElementById('app-content'));
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'checklists_v2', hoje), { tasks: rotinaTasks }, { merge: true });
+            }
+        };
+
+        // --- CATALOGO VIEW ---
+        window.toggleCnpj = () => {
+            hasCnpj = document.getElementById('cat-cnpj').checked;
+            filterCatalog();
+        };
+
+        window.filterCatalog = () => {
+            catSearch = document.getElementById('cat-search') ? document.getElementById('cat-search').value.toLowerCase() : "";
+            catalogFiltered = catalogProducts.filter(p => {
+                const matchSearch = catSearch ? (p.name.toLowerCase().includes(catSearch) || (p.reference || "").toLowerCase().includes(catSearch)) : true;
+                return matchSearch;
+            });
+            renderCatalogGrid();
+        };
+
+        function renderCatalogo(c) {
+            document.getElementById('page-title').innerText = "Catálogo & Estoque";
+
+            c.innerHTML = `
+                <div class="slide-up max-w-[1400px] mx-auto bg-apple-bg/30 border border-apple-border/30 rounded-[2rem] shadow-sm flex flex-col h-[calc(100vh-8rem)] overflow-hidden">
+                    <div class="p-6 border-b border-apple-border/30 flex flex-col md:flex-row gap-4 bg-white/50 backdrop-blur-md shrink-0 items-center justify-between">
+                        
+                        <div class="flex flex-col md:flex-row items-center gap-4 flex-1 w-full">
+                            <div class="relative flex-1 max-w-md w-full">
+                                <i class="ph ph-magnifying-glass absolute left-4 top-3 text-apple-textMut text-lg"></i>
+                                <input type="text" id="cat-search" onkeyup="filterCatalog()" placeholder="Buscar produto ou referência..." class="w-full bg-white border border-apple-border rounded-full pl-11 pr-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-400 transition-all shadow-sm">
+                            </div>
+                            
+                            <label class="flex items-center gap-2 cursor-pointer bg-white px-5 py-2.5 rounded-full border border-apple-border shadow-sm hover:bg-gray-50 transition-colors">
+                                <input type="checkbox" id="cat-cnpj" onchange="toggleCnpj()" class="apple-checkbox w-4 h-4" ${hasCnpj ? 'checked' : ''}>
+                                <span class="text-sm font-bold text-apple-text">Cliente possui CNPJ (Desbloqueia Tuguir)</span>
+                            </label>
+                        </div>
+
+                        <button onclick="window.generateCatalogPdf()" id="btn-cat-pdf" class="w-full md:w-auto bg-brand-600 hover:bg-brand-500 text-white px-6 py-2.5 rounded-full text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md">
+                            <i class="ph ph-file-pdf text-lg"></i> Baixar PDF (S/ Preço)
+                        </button>
+                    </div>
+
+                    <div class="overflow-y-auto flex-1 p-6 bg-white" id="catalog-grid">
+                        ${!isCatalogLoaded ? `<div class="flex flex-col items-center justify-center h-full text-apple-textMut"><i class="ph ph-circle-notch animate-spin-slow text-4xl text-brand-500 mb-4"></i><p class="font-semibold" id="loading-text">A carregar produtos da loja...</p></div>` : ''}
+                    </div>
                 </div>
-                <div class="cart-item-controls">
-                    <button class="quantity-btn" onclick="updateCartQuantity(${item.id}, ${item.quantity - 1})">−</button>
-                    <input
-                        type="number"
-                        class="quantity-input"
-                        value="${item.quantity}"
-                        onchange="updateCartQuantity(${item.id}, parseInt(this.value))"
-                        min="1"
-                        max="99"
-                    />
-                    <button class="quantity-btn" onclick="updateCartQuantity(${item.id}, ${item.quantity + 1})">+</button>
-                    <button class="remove-item" onclick="removeFromCart(${item.id})">🗑️</button>
+            `;
+
+            if (!isCatalogLoaded) fetchCatalog();
+            else renderCatalogGrid();
+        }
+
+        async function fetchCatalog() {
+            try {
+                let currentPage = 1;
+                let hasMore = true;
+                let limit = 50;
+                let allFetched = [];
+
+                while (hasMore) {
+                    const loadingText = document.getElementById('loading-text');
+                    if (loadingText) loadingText.innerText = `A transferir catálogo... (${allFetched.length} produtos)`;
+
+                    const response = await fetch(`${API_CATALOG}/products?limit=${limit}&page=${currentPage}`);
+                    if (!response.ok) throw new Error("Erro API");
+
+                    const data = await response.json();
+
+                    if (data.Products && Array.isArray(data.Products)) {
+                        const pageProducts = data.Products.map(item => item.Product);
+                        allFetched = [...allFetched, ...pageProducts];
+
+                        const totalRecords = parseInt(data.paging?.total || 0);
+
+                        if (pageProducts.length < limit || (totalRecords > 0 && allFetched.length >= totalRecords)) {
+                            hasMore = false;
+                        } else {
+                            currentPage++;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                }
+                catalogProducts = allFetched;
+            } catch (e) {
+                console.error("Erro ao puxar dados da API:", e);
+                // Mock se API falhar
+                const brandsList = ["Skmei", "Tuguir", "Onix", "Weide"];
+                catalogProducts = [];
+                for (let i = 1; i <= 60; i++) {
+                    const b = brandsList[i % brandsList.length];
+                    const outStock = i % 8 === 0;
+                    catalogProducts.push({
+                        id: i, name: `Relógio ${b} Luxo Executivo ${i}`, price: (80 + i).toFixed(2),
+                        reference: `${b.substring(0, 3).toUpperCase()}-${i}`, brand: b,
+                        ProductImage: [{ http: `https://via.placeholder.com/300x300?text=${b}` }],
+                        stock: outStock ? "0" : "15", available: outStock ? "0" : "1"
+                    });
+                }
+            } finally {
+                isCatalogLoaded = true;
+                filterCatalog();
+            }
+        }
+
+        function renderCatalogGrid() {
+            const grid = document.getElementById('catalog-grid');
+            if (!grid) return;
+
+            if (catalogFiltered.length === 0) {
+                grid.innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-apple-textMut"><i class="ph ph-package-x text-5xl mb-3 opacity-50"></i><p class="font-semibold">Nenhum produto encontrado.</p></div>`;
+                return;
+            }
+
+            let html = `<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">`;
+
+            catalogFiltered.forEach(p => {
+                const isTuguir = (p.brand || "").toLowerCase() === 'tuguir';
+                const isLocked = isTuguir && !hasCnpj;
+
+                const isAvailable = p.available == 1;
+                const stockQty = Number(p.stock || 0);
+
+                let badgeHTML = '';
+                if (isAvailable) {
+                    if (stockQty <= 0) {
+                        badgeHTML = `<span class="absolute top-2 right-2 bg-emerald-500 text-white border border-emerald-600 text-[9px] font-bold px-2 py-0.5 rounded-full z-10 shadow-sm">PRONTA ENTREGA</span>`;
+                    } else {
+                        badgeHTML = `<span class="absolute top-2 right-2 bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-0.5 rounded-full z-10">EST: ${stockQty}</span>`;
+                    }
+                } else {
+                    badgeHTML = `<span class="absolute top-2 right-2 bg-apple-bg text-apple-textMut border border-apple-border/50 text-[9px] font-bold px-2 py-0.5 rounded-full z-10">ESGOTADO</span>`;
+                }
+
+                let imgUrl = p.ProductImage?.[0]?.https || p.ProductImage?.[0]?.http || "https://via.placeholder.com/300?text=Sem+Foto";
+                imgUrl = imgUrl.replace('http://', 'https://');
+
+                html += `
+                    <div class="group bg-apple-bg/40 rounded-2xl border border-apple-border/40 overflow-hidden flex flex-col hover:shadow-apple-hover transition-all duration-300 relative">
+                        <div class="aspect-square bg-white relative overflow-hidden p-4 flex items-center justify-center">
+                            <img src="${imgUrl}" class="w-full h-full object-contain transition-transform duration-500 ${isLocked || !isAvailable ? 'blur-[3px] grayscale scale-110' : 'group-hover:scale-105'}" loading="lazy">
+                            
+                            ${badgeHTML}
+                            
+                            ${isLocked ? `
+                                <div class="absolute inset-0 bg-white/30 backdrop-blur-sm flex items-center justify-center z-10">
+                                    <span class="bg-black/80 text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1.5"><i class="ph-fill ph-lock-key"></i> Exclusivo CNPJ</span>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="p-3 flex-1 flex flex-col bg-white">
+                            <p class="text-[9px] text-apple-textMut font-bold uppercase tracking-wider mb-0.5">REF: ${p.reference || '-'}</p>
+                            <h3 class="text-xs font-semibold text-apple-text leading-tight line-clamp-2 mb-2 ${isLocked ? 'blur-[4px] select-none' : ''}">${p.name}</h3>
+                            <div class="mt-auto pt-2 border-t border-apple-bg flex justify-between items-end">
+                                <span class="text-[9px] font-bold px-1.5 py-0.5 bg-apple-bg rounded text-apple-textMut">${p.brand || 'Marca'}</span>
+                                <span class="text-sm font-bold text-brand-600">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(p.price || 0)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            grid.innerHTML = html;
+        }
+
+        window.generateCatalogPdf = async () => {
+            if (isGeneratingPdf) return;
+            if (!window.jspdf) { showToast("Biblioteca PDF não carregada.", "error"); return; }
+
+            const items = catalogFiltered.filter(p => p.available == 1);
+
+            if (items.length === 0) {
+                showToast("Não há produtos em estoque com o filtro atual.", "warning"); return;
+            }
+
+            const btn = document.getElementById('btn-cat-pdf');
+            btn.innerHTML = `<i class="ph ph-spinner-gap animate-spin text-lg"></i> Gerando PDF...`;
+            isGeneratingPdf = true;
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+
+                const margin = 10;
+                const cols = 4; // 4 colunas no PDF
+                const gap = 4;
+                const cardWidth = (pageWidth - (margin * 2) - (gap * (cols - 1))) / cols;
+                const cardHeight = 65;
+
+                let x = margin;
+                let y = 35;
+                let col = 0;
+
+                // Header PDF
+                doc.setFillColor(29, 29, 31); // Apple text color
+                doc.rect(0, 0, pageWidth, 25, 'F');
+                doc.setTextColor(255, 255, 255);
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(16);
+                doc.text("CATÁLOGO DE PRODUTOS", 15, 12);
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.text("Apenas Itens Disponíveis em Estoque (Sem Preços)", 15, 18);
+                doc.setFontSize(8);
+                doc.text(new Date().toLocaleDateString('pt-BR'), pageWidth - 15, 15, { align: 'right' });
+
+                for (let i = 0; i < items.length; i++) {
+                    const p = items[i];
+
+                    if (y + cardHeight > pageHeight - 10) {
+                        doc.addPage();
+                        y = 15; x = margin; col = 0;
+                    }
+
+                    const isTuguir = (p.brand || "").toLowerCase() === 'tuguir';
+                    const isLocked = isTuguir && !hasCnpj;
+
+                    doc.setDrawColor(230, 230, 235);
+                    doc.setFillColor(255, 255, 255);
+                    doc.roundedRect(x, y, cardWidth, cardHeight, 2, 2, 'FD');
+
+                    const imgSize = cardWidth - 6;
+                    const imgX = x + 3;
+                    const imgY = y + 3;
+
+                    if (isLocked) {
+                        // Bloqueado Tuguir - Placeholder
+                        doc.setFillColor(245, 245, 247);
+                        doc.rect(imgX, imgY, imgSize, imgSize, 'F');
+                        doc.setTextColor(150, 150, 155);
+                        doc.setFont("helvetica", "bold");
+                        doc.setFontSize(7);
+                        doc.text("EXCLUSIVO", imgX + imgSize / 2, imgY + imgSize / 2 - 2, { align: 'center' });
+                        doc.text("CNPJ", imgX + imgSize / 2, imgY + imgSize / 2 + 3, { align: 'center' });
+                    } else {
+                        // Imagem real
+                        let imgUrl = p.ProductImage?.[0]?.https || p.ProductImage?.[0]?.http;
+                        if (imgUrl) {
+                            imgUrl = imgUrl.replace('http://', 'https://');
+                            const imgData = await getBase64Image(imgUrl);
+                            if (imgData) {
+                                try {
+                                    doc.addImage(imgData, 'JPEG', imgX, imgY, imgSize, imgSize);
+                                } catch (e) { }
+                            }
+                        }
+                    }
+
+                    const textY = imgY + imgSize + 4;
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(6);
+                    doc.setTextColor(134, 134, 139); // TextMut
+                    doc.text(isLocked ? "MARCA RESERVADA" : (p.brand || "MARCA").toUpperCase(), x + 3, textY);
+
+                    doc.text(`REF: ${p.reference || '-'}`, x + cardWidth - 3, textY, { align: 'right' });
+
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(7);
+                    doc.setTextColor(29, 29, 31);
+
+                    const nameTxt = isLocked ? "Produto indisponível para o seu tipo de cadastro." : (p.name || "");
+                    const splitTitle = doc.splitTextToSize(nameTxt, cardWidth - 6);
+                    doc.text(splitTitle.slice(0, 2), x + 3, textY + 4);
+
+                    col++;
+                    if (col >= cols) { col = 0; x = margin; y += cardHeight + gap; }
+                    else { x += cardWidth + gap; }
+                }
+
+                doc.save(`Catalogo_Estoque_${new Date().getTime()}.pdf`);
+                showToast("PDF gerado e descarregado com sucesso!");
+            } catch (error) {
+                console.error(error);
+                showToast("Erro ao gerar PDF.", "error");
+            } finally {
+                isGeneratingPdf = false;
+                btn.innerHTML = `<i class="ph ph-file-pdf text-lg"></i> Baixar PDF (S/ Preço)`;
+            }
+        }
+
+        async function getBase64Image(url) {
+            const proxies = ['https://corsproxy.io/?', 'https://api.allorigins.win/raw?url='];
+            for (let prefix of proxies) {
+                try {
+                    const controller = new AbortController();
+                    const id = setTimeout(() => controller.abort(), 4000);
+                    const res = await fetch(prefix + url, { signal: controller.signal });
+                    clearTimeout(id);
+                    if (!res.ok) continue;
+                    const blob = await res.blob();
+                    return await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (e) { continue; }
+            }
+            return null;
+        }
+
+        // --- CARRINHOS, COMPRADOS E BASE LOGIC ---
+        function renderCarrinhos(c) {
+            document.getElementById('page-title').innerText = "Carrinhos Abandonados";
+            const carrinhos = allLeads.filter(l => l.classe === 'Carrinho');
+
+            c.innerHTML = `
+                <div class="slide-up max-w-[1400px] mx-auto space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${carrinhos.map(lead => `
+                            <div class="bg-apple-bg/40 border ${lead.proxRetorno <= hoje ? 'border-red-300/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'border-apple-border/40'} rounded-[1.5rem] p-6 shadow-sm relative overflow-hidden flex flex-col group hover:shadow-apple-hover transition-all duration-300 hover:-translate-y-1">
+                                ${lead.proxRetorno <= hoje ? '<div class="absolute top-0 left-0 w-1.5 h-full bg-red-500"></div>' : ''}
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 class="font-bold text-lg text-apple-text tracking-tight">${lead.nome}</h3>
+                                        <p class="text-xs font-semibold text-apple-textMut mt-0.5">${lead.telefone}</p>
+                                    </div>
+                                    <span class="text-[10px] font-bold uppercase px-3 py-1.5 rounded-full bg-white text-apple-text border border-apple-border shadow-sm">Tentativa ${lead.tentativas || 0}</span>
+                                </div>
+                                <div class="mt-auto pt-4 space-y-4">
+                                    <div class="bg-white rounded-xl p-3 border border-apple-border/30 flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-apple-textMut">Próx. Contato:</span>
+                                        <span class="text-sm font-bold ${lead.proxRetorno <= hoje ? 'text-red-500' : 'text-apple-text'}">${formatDate(lead.proxRetorno) || 'Hoje'}</span>
+                                    </div>
+                                    <button onclick="avancarCarrinho('${lead.dbId}')" class="w-full bg-brand-50 text-brand-700 border border-brand-200 py-3 rounded-xl text-sm font-bold hover:bg-brand-500 hover:text-white hover:border-brand-500 transition-all flex justify-center items-center gap-2">
+                                        <i class="ph ph-whatsapp-logo text-lg"></i> Enviar Mensagem
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                        ${carrinhos.length === 0 ? '<div class="col-span-full bg-apple-bg/30 border border-apple-border/30 rounded-[2rem] p-16 text-center"><div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><i class="ph ph-shopping-cart-simple text-2xl text-apple-textMut"></i></div><p class="font-semibold text-apple-text">Tudo limpo!</p><p class="text-sm text-apple-textMut mt-1">Nenhum carrinho pendente no momento.</p></div>' : ''}
+                    </div>
                 </div>
-            </div>
-        `
-            )
-            .join("");
-
-        cartItems.innerHTML = cartHTML;
-
-        const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-        document.getElementById("subtotal").textContent = `R$ ${subtotal.toFixed(2).replace(".", ",")}`;
-        document.getElementById("total").textContent = `R$ ${subtotal.toFixed(2).replace(".", ",")}`;
-
-        cartTotal.style.display = "block";
-    }
-
-    function toggleCart() {
-        const modal = document.getElementById("cartModal");
-        modal.style.display = modal.style.display === "block" ? "none" : "block";
-    }
-
-    function checkoutWhatsApp() {
-        if (cart.length === 0) {
-            alert("Seu carrinho está vazio!");
-            return;
+            `;
         }
 
-        const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        function renderComprados(c) {
+            document.getElementById('page-title').innerText = "Leads Comprados (Frio)";
+            const comprados = allLeads.filter(l => l.classe === 'Lead Frio');
 
-        if (total < 500) {
-            alert(`O valor mínimo para finalizar a compra é R$ 500,00. Falta R$ ${(500 - total).toFixed(2).replace('.', ',')} para completar o pedido.`);
-            return;
+            c.innerHTML = `
+                <div class="slide-up max-w-[1400px] mx-auto bg-apple-bg/30 border border-apple-border/30 rounded-[2rem] shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-apple-border/30 bg-white/50 backdrop-blur-md flex justify-between items-center">
+                        <span class="text-sm font-bold text-apple-text">${comprados.length} Leads Importados</span>
+                    </div>
+                    <div class="overflow-x-auto p-2">
+                        <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+                            <thead class="text-apple-textMut text-xs uppercase tracking-wider font-semibold px-4">
+                                <tr><th class="py-2 px-6">Lead</th><th class="py-2 px-4">Telefone</th><th class="py-2 px-4">Tag Atual</th><th class="py-2 px-4">Próx. Ação</th><th class="py-2 px-6 text-right">Ação</th></tr>
+                            </thead>
+                            <tbody>
+                                ${comprados.map(lead => `
+                                    <tr class="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-2xl transition-all duration-300 hover:shadow-md group">
+                                        <td class="py-4 px-6 font-bold text-apple-text rounded-l-2xl">${lead.nome}</td>
+                                        <td class="py-4 px-4 font-medium text-apple-textMut">${lead.telefone}</td>
+                                        <td class="py-4 px-4"><span class="px-3 py-1 bg-apple-bg border border-apple-border/50 text-apple-text rounded-full text-xs font-bold shadow-sm">${lead.tag || 'Novo'}</span></td>
+                                        <td class="py-4 px-4 text-xs font-semibold text-apple-textMut">${formatDate(lead.proxRetorno) || '-'}</td>
+                                        <td class="py-4 px-6 text-right rounded-r-2xl">
+                                            <select onchange="atualizarTag('${lead.dbId}', this.value)" class="text-xs border border-apple-border rounded-full px-3 py-1.5 outline-none bg-apple-bg font-semibold cursor-pointer hover:bg-gray-200 transition-colors appearance-none">
+                                                <option value="">Alterar Tag...</option>
+                                                <option value="Tentativa 1">Tentativa 1</option>
+                                                <option value="Tentativa 2">Tentativa 2</option>
+                                                <option value="Sem Resposta">Sem Resposta</option>
+                                                <option value="Interessado">Interessado</option>
+                                                <option value="Convertido">Convertido!</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
         }
 
-        let message = "🛒 *PEDIDO - RELÓGIO STORE*\n\n";
-        message += "📋 *PRODUTOS:*\n";
+        function renderBase(c) {
+            document.getElementById('page-title').innerText = "Base de Clientes";
+            const base = allLeads.filter(l => l.classe !== 'Carrinho' && l.classe !== 'Lead Frio');
 
-        cart.forEach((item, index) => {
-            message += `\n${index + 1}. *${item.name}*\n`;
-            message += `   👉 Marca: ${item.brand}\n`;
-            message += `   👉 Quantidade: ${item.quantity}x\n`;
-            message += `   👉 Preço unitário: R$ ${item.price.toFixed(2).replace(".", ",")}\n`;
-            message += `   👉 Subtotal: R$ ${(item.price * item.quantity).toFixed(2).replace(".", ",")}\n`;
-        });
-
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-
-        message += `\n💰 *RESUMO DO PEDIDO:*\n`;
-        message += `📦 Total de itens: ${totalItems}\n`;
-        message += `💵 *VALOR TOTAL: R$ ${total.toFixed(2).replace(".", ",")}*\n\n`;
-        message += `📱 Gostaria de finalizar este pedido!\n`;
-        message += `🚚 Pode me informar sobre formas de pagamento e entrega?`;
-
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappURL = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodedMessage}`;
-
-        window.open(whatsappURL, "_blank");
-    }
-
-    document.getElementById("cartModal").addEventListener("click", function (e) {
-        if (e.target === this) {
-            toggleCart();
+            c.innerHTML = `
+                <div class="slide-up max-w-[1400px] mx-auto bg-apple-bg/30 border border-apple-border/30 rounded-[2rem] shadow-sm flex flex-col h-[calc(100vh-10rem)] overflow-hidden">
+                    <div class="p-6 border-b border-apple-border/30 flex gap-4 bg-white/50 backdrop-blur-md shrink-0">
+                        <div class="relative flex-1 max-w-sm">
+                            <i class="ph ph-magnifying-glass absolute left-4 top-3 text-apple-textMut text-lg"></i>
+                            <input type="text" id="filtro-base" onkeyup="filtrarBase()" placeholder="Procurar clientes..." class="w-full bg-white border border-apple-border rounded-full pl-11 pr-4 py-2.5 text-sm font-medium outline-none focus:ring-2 focus:ring-brand-400 transition-all shadow-sm">
+                        </div>
+                        <select id="filtro-tipo" onchange="filtrarBase()" class="bg-white border border-apple-border rounded-full px-5 py-2.5 text-sm font-semibold outline-none cursor-pointer hover:bg-gray-50 transition-colors shadow-sm appearance-none">
+                            <option value="">Todos (Normal & VIP)</option><option value="Normal">Normal</option><option value="VIP">VIP</option>
+                        </select>
+                    </div>
+                    <div class="overflow-y-auto flex-1 p-2">
+                        <table class="w-full text-left text-sm border-separate border-spacing-y-2">
+                            <thead class="text-apple-textMut text-xs uppercase tracking-wider font-semibold sticky top-0 bg-apple-bg/90 backdrop-blur-md z-10">
+                                <tr>
+                                    <th class="py-3 px-6">Cliente</th><th class="py-3 px-4">Telefone</th>
+                                    <th class="py-3 px-4">Categoria</th><th class="py-3 px-4">Status</th>
+                                    <th class="py-3 px-4">Última Compra</th><th class="py-3 px-6 text-right">Ação Rápida</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${base.map(lead => `
+                                    <tr class="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-2xl transition-all duration-300 hover:shadow-md group row-base" data-nome="${lead.nome.toLowerCase()}" data-tel="${lead.telefone}" data-tipo="${lead.tipoCliente || 'Normal'}">
+                                        <td class="py-4 px-6 font-bold text-apple-text rounded-l-2xl flex items-center gap-2">
+                                            ${lead.nome} ${lead.tipoCliente === 'VIP' ? '<i class="ph-fill ph-star text-vip-500" title="VIP"></i>' : ''}
+                                        </td>
+                                        <td class="py-4 px-4 font-medium text-apple-textMut">${lead.telefone}</td>
+                                        <td class="py-4 px-4"><span class="text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full ${lead.tipoCliente === 'VIP' ? 'bg-vip-50 text-vip-700 border border-vip-200' : 'bg-apple-bg text-apple-text border border-apple-border'} shadow-sm">${lead.tipoCliente || 'Normal'}</span></td>
+                                        <td class="py-4 px-4 text-xs font-bold ${getClasseColor(lead.classe)}">${lead.classe}</td>
+                                        <td class="py-4 px-4 text-xs font-semibold text-apple-textMut">${formatDate(lead.dataUltimaCompra) || 'Nenhuma'}</td>
+                                        <td class="py-4 px-6 text-right rounded-r-2xl">
+                                            <button onclick="registarCompra('${lead.dbId}')" class="text-xs bg-white text-brand-600 hover:bg-brand-500 hover:text-white px-4 py-2 rounded-full font-bold border border-brand-200 transition-all shadow-sm">Nova Compra</button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
         }
-    });
 
-    document.getElementById("searchInput").addEventListener("input", filterProducts);
+        // --- BUSINESS ACTIONS ---
+        window.avancarCarrinho = async (dbId) => {
+            const lead = allLeads.find(l => l.dbId === dbId);
+            let tent = (lead.tentativas || 0) + 1;
+            let addDays = tent === 1 ? 2 : (tent === 2 ? 3 : 5);
+            let d = new Date(); d.setDate(d.getDate() + addDays);
+            let nextD = d.toISOString().split('T')[0];
+            let novoHist = [...(lead.historico || []), { data: hoje, acao: `Enviada Mensagem ${tent}`, tag: 'Atualizado' }];
 
-    window.onload = async () => {
-        document.getElementById("productsContainer").innerHTML = '<div class="loading">⏳ Carregando produtos...</div>';
-        allProducts = await fetchAllProducts();
-        filteredProducts = [...allProducts];
-        renderProducts(filteredProducts);
-    };
-</script>
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leads_v2', dbId), {
+                tentativas: tent, proxRetorno: nextD, historico: novoHist
+            });
+            window.open(`https://wa.me/${lead.telefone.replace(/\D/g, '')}?text=Olá ${lead.nome.split(' ')[0]}, vi que deixou itens no carrinho! Posso ajudar?`, '_blank');
+        };
+
+        window.atualizarTag = async (dbId, tag) => {
+            if (!tag) return;
+            const lead = allLeads.find(l => l.dbId === dbId);
+            let d = new Date(); d.setDate(d.getDate() + 2);
+            let nextD = tag === 'Convertido' ? '' : d.toISOString().split('T')[0];
+            let novoHist = [...(lead.historico || []), { data: hoje, acao: `Mudança de Tag`, tag: tag }];
+
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leads_v2', dbId), {
+                tag: tag, proxRetorno: nextD, historico: novoHist, status: tag === 'Convertido' ? 'Convertido' : lead.status
+            });
+        };
+
+        window.registarCompra = async (dbId) => {
+            if (confirm('Registar nova compra para este cliente hoje? Isto irá atualizar o status para Pós-Venda.')) {
+                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leads_v2', dbId), {
+                    dataUltimaCompra: hoje, proxRetorno: hoje
+                });
+                showToast("Compra registada! Cliente transferido para Pós-Venda.");
+            }
+        };
+
+        window.filtrarBase = () => {
+            const txt = document.getElementById('filtro-base').value.toLowerCase();
+            const tipo = document.getElementById('filtro-tipo').value;
+            document.querySelectorAll('.row-base').forEach(row => {
+                const rTxt = row.getAttribute('data-nome') + row.getAttribute('data-tel');
+                const rTipo = row.getAttribute('data-tipo');
+                row.style.display = (!txt || rTxt.includes(txt)) && (!tipo || rTipo === tipo) ? '' : 'none';
+            });
+        }
+
+        // --- IMPORT & CREATION ---
+        window.openImportModal = () => document.getElementById('modal-import').classList.remove('hidden', 'flex'), document.getElementById('modal-import').classList.add('flex');
+        window.openNovoLeadModal = () => document.getElementById('modal-novo-lead').classList.remove('hidden', 'flex'), document.getElementById('modal-novo-lead').classList.add('flex');
+        window.closeModal = (id) => document.getElementById(id).classList.add('hidden'), document.getElementById(id).classList.remove('flex');
+
+        window.salvarNovoLead = async () => {
+            const n = document.getElementById('fnome').value, t = document.getElementById('ftel').value;
+            const tipo = document.getElementById('ftipo').value, orig = document.getElementById('forigem').value;
+            if (!n || !t) { showToast("Nome e Telefone requeridos.", "warning"); return; }
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leads_v2', 'ld_' + Date.now()), {
+                nome: n, telefone: t, tipoCliente: tipo, origem: orig, dataEntrada: hoje, historico: []
+            });
+            showToast("Cliente registado com sucesso!");
+            closeModal('modal-novo-lead');
+        };
+
+        // =========================================================================
+        // NOVO MOTOR DE PROCESSAMENTO DE CSV / TEXTO (LÓGICA BLINDADA DE DRAG E DROP)
+        // =========================================================================
+
+        window.arquivoCSVSelecionado = null;
+
+        // Função global de seleção
+        window.handleFileSelect = (file) => {
+            if (!file) return;
+            window.arquivoCSVSelecionado = file;
+            document.getElementById('file-name').textContent = file.name;
+            document.getElementById('file-name-container').classList.remove('hidden');
+            document.getElementById('file-name-container').classList.add('flex');
+            document.getElementById('btn-processar-csv').disabled = false;
+        };
+
+        // Função global para limpar seleção
+        window.limparArquivo = () => {
+            window.arquivoCSVSelecionado = null;
+            document.getElementById('csv-file-input').value = '';
+            document.getElementById('file-name-container').classList.add('hidden');
+            document.getElementById('file-name-container').classList.remove('flex');
+            document.getElementById('texto-csv').value = '';
+            document.getElementById('btn-processar-csv').disabled = true;
+        };
+
+        window.processarArquivoCSV = () => {
+            const textoColado = document.getElementById('texto-csv').value;
+
+            if (!window.arquivoCSVSelecionado && !textoColado.trim()) {
+                showToast("Por favor, selecione um arquivo ou cole os dados.", "warning");
+                return;
+            }
+
+            const layout = document.getElementById('colar-layout').value;
+            const tipo = document.getElementById('colar-tipo').value;
+            const loader = document.getElementById('loading-screen');
+            const loaderText = document.getElementById('global-loading-text');
+
+            loader.classList.remove('hidden');
+            loaderText.innerText = "A processar dados...";
+
+            if (window.arquivoCSVSelecionado) {
+                // Usa a função universal que suporta CSV e Excel
+                parseFileToArray(window.arquivoCSVSelecionado, async (rows) => {
+                    await processarArrayPapaParse(rows, layout, tipo);
+                }, (errMsg) => {
+                    showToast(errMsg, 'error');
+                    loader.classList.add('hidden');
+                });
+            } else if (textoColado.trim()) {
+                // Processa o texto colado diretamente
+                if (!window.Papa) {
+                    showToast("PapaParse não carregado. Atualize a página.", "error");
+                    loader.classList.add('hidden');
+                    return;
+                }
+                Papa.parse(textoColado, {
+                    header: false,
+                    skipEmptyLines: true,
+                    transform: (value) => value.trim().replace(/^['"]|['"]$/g, ''),
+                    complete: async (results) => {
+                        if (results.errors.length > 0) console.warn("Erros PapaParse:", results.errors);
+                        await processarArrayPapaParse(results.data, layout, tipo);
+                    },
+                    error: (err) => {
+                        console.error("Erro PapaParse:", err);
+                        showToast("Falha ao ler a estrutura dos dados.", "error");
+                        loader.classList.add('hidden');
+                    }
+                });
+            }
+        };
+
+        async function processarArrayPapaParse(linhas, layout, tipoBase) {
+            const loader = document.getElementById('loading-screen');
+            const loaderText = document.getElementById('global-loading-text');
+            loaderText.innerText = "A cruzar dados e gravar...";
+
+            try {
+                let countImported = 0;
+                let countDuplicates = 0;
+                let countInvalid = 0;
+                let promisesBatch = [];
+
+                const telefonesExistentes = new Set(allLeads.map(l => l.telefone.replace(/\D/g, '')));
+                const telefonesNesteLote = new Set();
+
+                for (let i = 0; i < linhas.length; i++) {
+                    const cols = linhas[i];
+                    if (!cols || cols.length === 0) continue;
+
+                    let n = '', t = '', uf = '', origem = '', ultimaCompra = null, tag = 'Novo';
+
+                    if (layout === 'clientes') {
+                        // Verifica cabeçalho
+                        if (i === 0 && (String(cols[0]).toLowerCase().includes('código') || String(cols[1]).toLowerCase().includes('data'))) continue;
+
+                        n = cols[3] || 'Cliente Sem Nome';
+                        t = cols[13] || cols[14] || '';
+                        uf = cols[9] || '';
+                        origem = 'Base Antiga';
+
+                        if (cols[15] && String(cols[15]).trim() !== '') {
+                            let dataStr = String(cols[15]).split(' ')[0];
+                            if (dataStr.includes('/')) {
+                                const parts = dataStr.split('/');
+                                if (parts.length === 3) ultimaCompra = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                            } else if (dataStr.includes('-')) {
+                                ultimaCompra = dataStr;
+                            }
+                        }
+
+                    } else if (layout === 'leads') {
+                        // Pula cabeçalho se existir
+                        if (i === 0 && (String(cols[0]).toLowerCase().includes('cnpj') || String(cols[1]).toLowerCase().includes('cnpj'))) continue;
+
+                        // cols[0] pode ser vazio (CSV começa com ;)
+                        // cols[1]=CNPJ, cols[2]=Razão Social, cols[3]=Nome Fantasia
+                        // cols[8]=UF, cols[9]=Telefone1, cols[10]=Telefone2, cols[11]=Email
+                        n = (cols[3] && String(cols[3]).trim() !== '') ? cols[3] : ((cols[2] && String(cols[2]).trim() !== '') ? cols[2] : (cols[1] || 'Empresa Sem Nome'));
+                        t = cols[9] || cols[10] || '';
+                        uf = cols[8] || '';
+                        origem = 'Comprado';
+
+                    } else if (layout === 'simples') {
+                        if (i === 0 && String(cols[0]).toLowerCase().includes('nome')) continue;
+                        n = cols[0] || 'Nome não definido';
+                        t = cols[1] || '';
+                        origem = 'Importação Manual';
+                    }
+
+                    if (String(n).toLowerCase() === 'nome cliente') continue;
+
+                    let cleanPhone = t ? String(t).replace(/\D/g, '') : '';
+
+                    if (cleanPhone.length < 10) {
+                        const possiblePhoneCol = cols.find(c => {
+                            if (!c) return false;
+                            let strC = String(c);
+                            if (strC.includes('@') || strC.toLowerCase().includes('cep')) return false;
+                            const digits = strC.replace(/\D/g, '');
+                            return digits.length >= 10 && digits.length <= 15 && !strC.toLowerCase().includes('cnpj');
+                        });
+                        if (possiblePhoneCol) cleanPhone = String(possiblePhoneCol).replace(/\D/g, '');
+                    }
+
+                    if (cleanPhone.length >= 10 && cleanPhone.length <= 15) {
+
+                        if (telefonesExistentes.has(cleanPhone) || telefonesNesteLote.has(cleanPhone)) {
+                            countDuplicates++;
+                        } else {
+                            telefonesNesteLote.add(cleanPhone);
+
+                            const docId = 'imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+                            promisesBatch.push(
+                                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'leads_v2', docId), {
+                                    nome: n, telefone: cleanPhone, uf: uf, tipoCliente: tipoBase, origem: origem,
+                                    dataEntrada: hoje, dataUltimaCompra: ultimaCompra, tag: tag, historico: [], status: 'Novo'
+                                })
+                            );
+                            countImported++;
+
+                            if (promisesBatch.length >= 100) {
+                                loaderText.innerText = `A guardar... (${countImported} gravados)`;
+                                await Promise.all(promisesBatch);
+                                promisesBatch = [];
+                            }
+                        }
+                    } else {
+                        countInvalid++;
+                    }
+                }
+
+                if (promisesBatch.length > 0) {
+                    loaderText.innerText = `A finalizar... (${countImported} gravados)`;
+                    await Promise.all(promisesBatch);
+                }
+
+                showToast(`Sucesso! ${countImported} clientes salvos. (${countDuplicates} duplicados ignorados, ${countInvalid} inválidos/sem telemóvel)`, countImported > 0 ? 'success' : 'warning');
+
+                // Fecha modal apenas se está aberto
+                const modalImport = document.getElementById('modal-import');
+                if (modalImport && !modalImport.classList.contains('hidden')) {
+                    closeModal('modal-import');
+                    window.limparArquivo();
+                }
+
+                if (currentView === 'base' || currentView === 'comprados' || currentView === 'pastas') renderCurrentView();
+
+            } catch (error) {
+                console.error("Erro crítico de importação PapaParse:", error);
+                showToast("Erro ao processar as colunas.", "error");
+            } finally {
+                loader.classList.add('hidden');
+            }
+        }
+
+        // --- GESTÃO DE PASTAS VIEW ---
+        function renderPastas(c) {
+            document.getElementById('page-title').innerText = "Gestão de Pastas";
+
+            const folders = [
+                {
+                    key: 'normal',
+                    title: 'Clientes Normal',
+                    subtitle: 'Base de clientes da loja (Código, Nome, CPF, Telefone...)',
+                    icon: 'ph-users-three',
+                    gradient: 'from-brand-500 to-emerald-600',
+                    bgLight: 'bg-brand-50',
+                    borderLight: 'border-brand-200',
+                    textColor: 'text-brand-700',
+                    layout: 'clientes',
+                    tipo: 'Normal',
+                    count: allLeads.filter(l => l.tipoCliente !== 'VIP' && l.origem !== 'Comprado').length
+                },
+                {
+                    key: 'comprado',
+                    title: 'Leads Comprado',
+                    subtitle: 'Leads atacado B2B (CNPJ, Razão Social, Telefone...)',
+                    icon: 'ph-shopping-bag',
+                    gradient: 'from-amber-500 to-orange-600',
+                    bgLight: 'bg-amber-50',
+                    borderLight: 'border-amber-200',
+                    textColor: 'text-amber-700',
+                    layout: 'leads',
+                    tipo: 'Normal',
+                    count: allLeads.filter(l => l.origem === 'Comprado').length
+                },
+                {
+                    key: 'vip',
+                    title: 'Clientes VIP',
+                    subtitle: 'Base exclusiva de clientes VIP (Código, Nome, CPF, Telefone...)',
+                    icon: 'ph-crown',
+                    gradient: 'from-vip-500 to-purple-700',
+                    bgLight: 'bg-vip-50',
+                    borderLight: 'border-vip-200',
+                    textColor: 'text-vip-700',
+                    layout: 'clientes',
+                    tipo: 'VIP',
+                    count: allLeads.filter(l => l.tipoCliente === 'VIP').length
+                }
+            ];
+
+            c.innerHTML = `
+                <div class="slide-up max-w-[1400px] mx-auto space-y-8 pb-10">
+                    
+                    <!-- Header -->
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-apple-bg rounded-full flex items-center justify-center shadow-sm border border-apple-border/30">
+                            <i class="ph ph-folder-open text-2xl text-apple-text"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-apple-text tracking-tight">Importar CSV por Pasta</h3>
+                            <p class="text-sm text-apple-textMut font-medium">Selecione o arquivo CSV de cada pasta para atualizar o CRM. O layout é detectado automaticamente.</p>
+                        </div>
+                    </div>
+
+                    <!-- Folder Cards -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        ${folders.map(f => `
+                            <div class="bg-white border border-apple-border/40 rounded-[2rem] shadow-sm overflow-hidden flex flex-col hover:shadow-apple-hover transition-all duration-300 group" id="folder-card-${f.key}">
+                                
+                                <!-- Card Header with gradient -->
+                                <div class="bg-gradient-to-br ${f.gradient} p-6 text-white relative overflow-hidden">
+                                    <div class="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+                                    <div class="absolute -bottom-6 -left-6 w-20 h-20 bg-white/10 rounded-full blur-lg"></div>
+                                    <div class="relative z-10">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+                                                <i class="ph ${f.icon} text-xl"></i>
+                                            </div>
+                                            <span class="text-xs font-bold bg-white/20 px-3 py-1 rounded-full backdrop-blur-md">${f.count} registros</span>
+                                        </div>
+                                        <h4 class="text-lg font-bold tracking-tight">${f.title}</h4>
+                                        <p class="text-xs text-white/70 mt-1 font-medium">${f.subtitle}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Card Body -->
+                                <div class="p-6 flex-1 flex flex-col gap-4">
+                                    
+                                    <!-- Auto-detected config -->
+                                    <div class="bg-apple-bg/50 rounded-xl p-3 border border-apple-border/30">
+                                        <p class="text-[10px] font-bold text-apple-textMut uppercase tracking-wider mb-2">Configuração Automática</p>
+                                        <div class="flex gap-2">
+                                            <span class="text-[10px] font-bold px-2 py-1 bg-white rounded-lg border border-apple-border/30 text-apple-text">Layout: ${f.layout === 'clientes' ? 'Base Clientes' : 'Leads Atacado'}</span>
+                                            <span class="text-[10px] font-bold px-2 py-1 ${f.tipo === 'VIP' ? 'bg-vip-50 text-vip-700 border-vip-200' : 'bg-brand-50 text-brand-700 border-brand-200'} rounded-lg border">Tipo: ${f.tipo}</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- File Input Hidden -->
+                                    <input type="file" id="folder-file-${f.key}" class="hidden" accept=".csv,.txt,.xlsx,.xls" onchange="window.handleFolderFile('${f.key}', this.files[0])">
+
+                                    <!-- Drop Zone -->
+                                    <div id="folder-drop-${f.key}"
+                                         onclick="document.getElementById('folder-file-${f.key}').click()"
+                                         ondragover="event.preventDefault(); this.classList.add('border-brand-500', 'bg-brand-50');"
+                                         ondragleave="event.preventDefault(); this.classList.remove('border-brand-500', 'bg-brand-50');"
+                                         ondrop="event.preventDefault(); this.classList.remove('border-brand-500', 'bg-brand-50'); if(event.dataTransfer.files[0]) window.handleFolderFile('${f.key}', event.dataTransfer.files[0]);"
+                                         class="border-2 border-dashed border-apple-border hover:border-brand-500 hover:bg-brand-50/50 rounded-xl p-5 text-center cursor-pointer transition-all duration-300 bg-apple-bg/20 group/drop">
+                                        <div class="w-10 h-10 bg-apple-bg group-hover/drop:bg-white rounded-full flex items-center justify-center mx-auto mb-2 transition-colors">
+                                            <i class="ph ph-upload-simple text-lg text-apple-textMut group-hover/drop:text-brand-500 transition-colors"></i>
+                                        </div>
+                                        <p class="text-xs font-bold text-apple-text">Clique ou arraste o arquivo aqui</p>
+                                        <p class="text-[10px] text-apple-textMut mt-1 font-medium">Aceita .csv, .xlsx e .xls</p>
+                                    </div>
+
+                                    <!-- Selected File Display -->
+                                    <div id="folder-selected-${f.key}" class="hidden p-3 ${f.bgLight} rounded-xl border ${f.borderLight} items-center gap-2">
+                                        <i class="ph-fill ph-file-csv ${f.textColor} text-lg"></i>
+                                        <p id="folder-filename-${f.key}" class="text-xs ${f.textColor} font-bold truncate flex-1"></p>
+                                        <button onclick="window.clearFolderFile('${f.key}')" class="ml-auto ${f.textColor} hover:opacity-70 p-1 bg-white rounded-full shadow-sm"><i class="ph ph-x text-sm font-bold"></i></button>
+                                    </div>
+
+                                    <!-- Last Import Timestamp -->
+                                    <div id="folder-timestamp-${f.key}" class="${lastImportTimestamps[f.key] ? '' : 'hidden'} text-center">
+                                        <p class="text-[10px] text-apple-textMut font-medium">Última importação: <span class="font-bold text-apple-text">${lastImportTimestamps[f.key] || '-'}</span></p>
+                                    </div>
+
+                                    <!-- Import Button -->
+                                    <button onclick="window.importFromFolder('${f.key}')" id="folder-btn-${f.key}" 
+                                            class="w-full mt-auto bg-apple-text hover:bg-black text-white font-bold py-3 rounded-xl transition-all shadow-sm flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-apple-text" disabled>
+                                        <i class="ph ph-database text-lg"></i> Importar e Salvar no Firebase
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Info Box -->
+                    <div class="bg-apple-bg/40 border border-apple-border/30 rounded-[1.5rem] p-6 flex items-start gap-4">
+                        <div class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-blue-500 shrink-0">
+                            <i class="ph ph-info text-xl"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-apple-text text-sm">Como funciona?</h4>
+                            <ul class="text-xs text-apple-textMut font-medium mt-2 space-y-1.5">
+                                <li class="flex items-center gap-2"><i class="ph ph-check-circle text-brand-500"></i> Cada card corresponde a uma pasta no seu computador</li>
+                                <li class="flex items-center gap-2"><i class="ph ph-check-circle text-brand-500"></i> O layout (colunas) e tipo de cliente são detectados automaticamente</li>
+                                <li class="flex items-center gap-2"><i class="ph ph-check-circle text-brand-500"></i> Duplicados por telefone são ignorados automaticamente</li>
+                                <li class="flex items-center gap-2"><i class="ph ph-check-circle text-brand-500"></i> Os dados são salvos diretamente no Firebase em tempo real</li>
+                                <li class="flex items-center gap-2"><i class="ph ph-check-circle text-brand-500"></i> Atualize as pastas no computador e reimporte a qualquer momento</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- FOLDER IMPORT HANDLERS ---
+        window.handleFolderFile = (key, file) => {
+            if (!file) return;
+            folderFiles[key] = file;
+            document.getElementById(`folder-filename-${key}`).textContent = file.name;
+            document.getElementById(`folder-selected-${key}`).classList.remove('hidden');
+            document.getElementById(`folder-selected-${key}`).classList.add('flex');
+            document.getElementById(`folder-btn-${key}`).disabled = false;
+        };
+
+        window.clearFolderFile = (key) => {
+            folderFiles[key] = null;
+            document.getElementById(`folder-file-${key}`).value = '';
+            document.getElementById(`folder-selected-${key}`).classList.add('hidden');
+            document.getElementById(`folder-selected-${key}`).classList.remove('flex');
+            document.getElementById(`folder-btn-${key}`).disabled = true;
+        };
+
+        // --- FUNÇÃO UNIVERSAL DE PARSING (CSV + EXCEL) ---
+        function parseFileToArray(file, callback, errorCallback) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            const isExcel = (ext === 'xlsx' || ext === 'xls');
+
+            if (isExcel) {
+                if (!window.XLSX) {
+                    errorCallback('Biblioteca SheetJS não carregada. Atualize a página.');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheetName = workbook.SheetNames[0];
+                        const sheet = workbook.Sheets[sheetName];
+                        // Converte para array de arrays (sem cabeçalho)
+                        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                        // Limpa valores
+                        const cleanRows = rows.map(row => row.map(cell => String(cell).trim().replace(/^['"]|['"]$/g, '')));
+                        callback(cleanRows);
+                    } catch (err) {
+                        console.error('Erro ao ler Excel:', err);
+                        errorCallback('Falha ao ler o arquivo Excel.');
+                    }
+                };
+                reader.onerror = () => errorCallback('Erro ao carregar o arquivo.');
+                reader.readAsArrayBuffer(file);
+            } else {
+                // CSV/TXT
+                if (!window.Papa) {
+                    errorCallback('Biblioteca PapaParse não carregada. Atualize a página.');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    let text = e.target.result;
+                    if (text.startsWith('\uFEFF')) text = text.substring(1);
+                    Papa.parse(text, {
+                        header: false,
+                        skipEmptyLines: true,
+                        transform: (value) => value.trim().replace(/^['"]|['"]$/g, ''),
+                        complete: (results) => {
+                            if (results.errors.length > 0) console.warn('Erros PapaParse:', results.errors);
+                            callback(results.data);
+                        },
+                        error: (err) => {
+                            console.error('Erro PapaParse:', err);
+                            errorCallback('Falha ao ler a estrutura do CSV.');
+                        }
+                    });
+                };
+                reader.onerror = () => errorCallback('Erro ao carregar o arquivo.');
+                reader.readAsText(file, 'windows-1252');
+            }
+        }
+
+        window.importFromFolder = (key) => {
+            const file = folderFiles[key];
+            if (!file) { showToast('Selecione um arquivo primeiro.', 'warning'); return; }
+
+            const configMap = {
+                normal: { layout: 'clientes', tipo: 'Normal' },
+                comprado: { layout: 'leads', tipo: 'Normal' },
+                vip: { layout: 'clientes', tipo: 'VIP' }
+            };
+
+            const config = configMap[key];
+            const loader = document.getElementById('loading-screen');
+            const loaderText = document.getElementById('global-loading-text');
+            const btn = document.getElementById(`folder-btn-${key}`);
+
+            btn.innerHTML = '<i class="ph ph-spinner-gap animate-spin text-lg"></i> Processando...';
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            loaderText.innerText = `A processar: ${file.name}...`;
+
+            parseFileToArray(file, async (rows) => {
+                await processarArrayPapaParse(rows, config.layout, config.tipo);
+
+                // Update timestamp
+                const now = new Date();
+                lastImportTimestamps[key] = now.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+                // Reset UI
+                window.clearFolderFile(key);
+                btn.innerHTML = '<i class="ph ph-database text-lg"></i> Importar e Salvar no Firebase';
+
+                if (currentView === 'pastas') renderPastas(document.getElementById('app-content'));
+            }, (errMsg) => {
+                showToast(errMsg, 'error');
+                loader.classList.add('hidden');
+                btn.innerHTML = '<i class="ph ph-database text-lg"></i> Importar e Salvar no Firebase';
+                btn.disabled = false;
+            });
+        };
+
+        // --- UTILS ---
+        function formatDate(ds) { if (!ds) return ''; const [y, m, d] = ds.split('-'); return `${d}/${m}`; }
+        function getClasseColor(c) {
+            const map = { 'Novo Lead': 'text-amber-500', 'Ativo': 'text-emerald-500', 'Pós-Venda': 'text-brand-500', 'Risco Inatividade': 'text-orange-500', 'Inativo': 'text-apple-textMut' };
+            return map[c] || 'text-apple-textMut';
+        }
+    </script>
 </body>
+
 </html>
